@@ -24,6 +24,12 @@ BOOST_STATIC_ASSERT(MAPNIK_VERSION >= 200200);
 
 namespace gopnik {
 
+#if MAPNIK_VERSION < 300000
+using image_data_32 = mapnik::image_data_32;
+#else
+using image_data_32 = mapnik::image_data_rgba8;
+#endif
+
 class x_pj_free {
 	public:
 		void operator()(projPJ pj) const {
@@ -43,11 +49,11 @@ class RenderImpl::impl {
 		std::unique_ptr<void, x_pj_free> pj_target_;
 	public:
 		impl(std::string stylesheet, std::vector<std::string> fonts_path, std::string plugins_path, unsigned tile_size, int buffer_size, double scale_factor);
-		void appendTile(std::shared_ptr<Result> res, mapnik::image_view<mapnik::image_data_32> vw);
+		void appendTile(std::shared_ptr<Result> res, mapnik::image_view<image_data_32> vw);
 		mapnik::box2d<double> getBbox(Task const &task);
 	protected:
 		void loadFonts(std::string path);
-		void analyzeTile(Tile *tile, mapnik::image_view<mapnik::image_data_32> vw);
+		void analyzeTile(Tile *tile, mapnik::image_view<image_data_32> vw);
 		void convertPoint(double &x, double &y, int zoom);
 };
 
@@ -153,7 +159,7 @@ RenderImpl::Do(Task const &task) {
 	unsigned x, y;
 	for (y = 0; y < task.size(); ++y) {
 		for (x = 0; x < task.size(); ++x) {
-			mapnik::image_view<mapnik::image_data_32> vw{
+			mapnik::image_view<image_data_32> vw{
 					x * pimpl_->tile_size_, y * pimpl_->tile_size_,
 					pimpl_->tile_size_, pimpl_->tile_size_,
 					buf.data()};
@@ -165,7 +171,7 @@ RenderImpl::Do(Task const &task) {
 }
 
 void
-RenderImpl::impl::appendTile(std::shared_ptr<Result> res, mapnik::image_view<mapnik::image_data_32> vw) {
+RenderImpl::impl::appendTile(std::shared_ptr<Result> res, mapnik::image_view<image_data_32> vw) {
 	Tile *tile = res->add_tiles();
 
 	// Encode tile
@@ -177,14 +183,14 @@ RenderImpl::impl::appendTile(std::shared_ptr<Result> res, mapnik::image_view<map
 }
 
 void
-RenderImpl::impl::analyzeTile(Tile *tile, mapnik::image_view<mapnik::image_data_32> vw) {
+RenderImpl::impl::analyzeTile(Tile *tile, mapnik::image_view<image_data_32> vw) {
 	// Analyze tile
 	unsigned x, y;
-	mapnik::image_data_32::pixel_type prev_pixel;
+	image_data_32::pixel_type prev_pixel;
 	for (y = 0; y < vw.height(); ++y) {
-		mapnik::image_data_32::pixel_type const *row = vw.getRow(y);
+		image_data_32::pixel_type const *row = vw.getRow(y);
 		for (x = 0; x < vw.width(); ++x) {
-			mapnik::image_data_32::pixel_type pixel = row[x];
+			image_data_32::pixel_type pixel = row[x];
 			if(x > 0 && y > 0 && pixel != prev_pixel) {
 				return;
 			}
