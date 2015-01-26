@@ -2,6 +2,8 @@
 
 source ./colors.bash
 
+PLUGINS=()
+
 printHelp() {
 	echo "------------------"
 	echo "  bootstrap.bash  "
@@ -22,6 +24,10 @@ do
 	case $key in
 		--version)
 			VERSION="$1"
+			shift
+		;;
+		--plugin)
+			PLUGINS+=("$1")
 			shift
 		;;
 		-h|--help)
@@ -50,14 +56,17 @@ var SlaveCmd = []string{"`pwd`/bin/gopnikslave",
 EOF
 
 echo "${bold}${magenta}Configuring plugins...${normal}"
-DEFPLUGINS=`ls -d ./src/defplugins/* | egrep -o 'defplugins/[a-z]+'`
+for p in `ls -d ./src/defplugins/* | egrep -o 'defplugins/[a-z]+'`
+do
+	PLUGINS+=("$p")
+done
 PLUGINS_CONFIG="src/plugins_enabled/config.go"
 cat << EOF > $PLUGINS_CONFIG
 package plugins_enabled
 
 import (
 EOF
-for p in $DEFPLUGINS; do
+for p in ${PLUGINS[@]}; do
 	echo -e "\t_ \"$p\"" >> $PLUGINS_CONFIG
 done
 
