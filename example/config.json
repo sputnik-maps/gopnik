@@ -1,0 +1,69 @@
+{
+	"Dispatcher": {
+		"Addr":             ":8080",
+		"HTTPReadTimeout":  "60s",
+		"HTTPWriteTimeout": "60s",
+		"RequestTimeout":   "600s",
+		"PingPeriod":       "30s",
+		"Threads":          -1,
+		"Logging": {
+			"Backend": "Console",
+			"Level":   "Debug",
+			"Options": {
+				"Color": true
+			}
+		}
+	},
+	"Render": {
+		"Stylesheet":       "/tmp/MapsStyle/carto.2.xml",
+		"PoolSize":         1,
+		"QueueSize":        100,
+		"FontPath":         "/usr/share/fonts/truetype/ttf-dejavu",
+		"Addr":             ":8090",
+		"DebugAddr":        ":9090",
+		"HTTPReadTimeout":  "300s",
+		"HTTPWriteTimeout": "300s",
+		"Logging": {
+			"Backend": "Console",
+			"Level":   "Debug",
+			"Options": {
+				"Color": true
+			}
+		}
+	},
+	"Prerender": {
+		"Stylesheet":       "/tmp/MapsStyle/carto.2.xml",
+		"FontPath":         "/usr/share/fonts/truetype/ttf-dejavu",
+		"RenderPoolSize":   2,
+		"SaverPoolSize":    2,
+		"Logging": {
+			"Backend": "Console",
+			"Level":   "Info",
+			"Options": {
+				"Color": true
+			}
+		},
+		"Perflog": "/tmp/prerenderperf.log"
+	},
+	"MetaSize":         8,
+	"RenderSlave":      "gopnikslave",
+	"ClusterPlugin":    "ClusterConfigPlugin",
+	"CachePlugin":      "CouchbaseCachePlugin",
+	"Plugins": {
+		"ClusterConfigPlugin": {
+			"Nodes":   ["localhost:8090"],
+		},
+		"FileCachePlugin": {
+			"Root":    "/tmp/tiles",
+			"UseHash": true
+		},
+		"FakeCachePlugin": {
+			"UseStubImage": true
+		},
+		"CouchbaseCachePlugin": {
+			"Addr":          "http://tiles@localhost:8091/",
+			"Bucket":        "tiles",
+			"UseMultilevel": true
+		}
+	}
+}

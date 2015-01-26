@@ -1,0 +1,35 @@
+doctype html
+html
+	head
+		meta charset=utf-9
+		title Gopnik::{{.Page}}
+		link href=/css/bootstrap.min.css rel=stylesheet
+		link href=/css/bootstrap-theme.min.css rel=stylesheet
+		style
+			body {padding-top: 50px;}
+		script type="text/javascript" src=/js/jquery.min.js
+		script type="text/javascript" src=/js/bootstrap.min.js
+	body
+		.navbar.navbar-inverse.navbar-fixed-top
+			.container-fluid
+				.navbar-header
+					a.navbar-brand href="/" Gopnik
+				.collapse.navbar-collapse
+					ul.nav.navbar-nav
+						{{if eq .Page "Status"}}
+							li.active
+								a href="/" Status
+						{{else}}
+							li
+								a href="/" Status
+						{{end}}
+						{{if eq .Page "Nodes"}}
+							li.active
+								a href="/nodes" Nodes
+						{{else}}
+							li
+								a href="/nodes" Nodes
+						{{end}}
+		.container-fluid
+			block content
+

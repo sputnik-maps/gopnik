@@ -1,0 +1,20 @@
+extends ./base
+
+block content
+	h2 Total
+	table.table.table-striped
+		{{range .TotalStats}}
+			tr
+				td {{.K}}
+				td {{.V}}
+		{{end}}
+	h2 Zooms
+	{{range .ZoomsStats}}
+		h3 {{.Zoom}}
+		table.table.table-striped
+			{{range .Stats}}
+				tr
+					td {{.K}}
+					td {{.V}}
+			{{end}}
+	{{end}}

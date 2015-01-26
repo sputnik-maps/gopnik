@@ -1,0 +1,43 @@
+extends ./base
+
+block content
+	h1 {{.Page}}
+	{{$addr := .Addr}}
+	{{range $metric := .Metrics}}
+		panel.panel-default
+			.panel-heading
+				h4 {{$metric}}
+			.panel-body
+				.row
+					.col-md-12
+						a href="/chart/{{$addr | urlquery}}?metric={{$metric | urlquery}}" {{.}}
+				.row
+					.col-md-12.chart data-metric="{{$metric | urlquery}}"
+	{{end}}
+	script type="text/javascript" src=/js/dygraph-combined.js
+	javascript:
+		$(".chart").each(function() {
+			var ch = $(this);
+			var metric = ch.data("metric");
+			$.get("/chart/{{$addr | urlquery}}?metric=" + metric, function(rawData) {
+				var data = JSON.parse(rawData);
+				var i;
+				var csvData = "Timestamp,Value\n";
+				for(i in data) {
+					var pointDate = new Date(data[i].Timestamp*1000);
+					var formattedDate = pointDate.getFullYear() + "/" +
+							(pointDate.getMonth() + 1) + "/" +
+							pointDate.getDate() + " " +
+							pointDate.getHours() + ':' +
+							pointDate.getMinutes() + ':' + pointDate.getSeconds();
+					csvData += formattedDate + "," + data[i].Value + "\n";
+				}
+				console.log(csvData);
+
+				ch.height(250);
+				new Dygraph(ch[0], csvData);
+			})
+		});
+		//setTimeout(function(){
+		//	window.location.reload(1);
+		//}, 20000);

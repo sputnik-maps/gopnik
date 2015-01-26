@@ -1,0 +1,21 @@
+extends ./base
+
+block content
+	h1 {{.Page}} {{.Addr}}
+	form.form-horizontal role=form action=/configure method=POST
+		input type=hidden name=Addr value={{.Addr}}
+		.form-group
+			label.col-sm-2.control-label for=inputRenders Renders
+			.col-sm-2
+				input#inputRenders.form-control type=number name=Renders min=0 value={{.Renders}}
+		.form-group
+			label.col-sm-2.control-label for=inputSavers Savers
+			.col-sm-2
+				input#inputSavers.form-control type=number name=Savers min=0 value={{.Savers}}
+		.form-group
+			label.col-sm-2.control-label for=inputTTL TTL
+			.col-sm-2
+				input#inputTTL.form-control type=number name=TTL min=0 value={{.TTL}}
+		.form-group
+			.col-sm-offset-2.col-sm-10
+				input.btn.btn-default type=submit value=Submit

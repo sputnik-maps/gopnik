@@ -1,0 +1,51 @@
+extends ./base
+
+block content
+	h1 {{.Page}}
+	{{range .Nodes}}
+		.panel.panel-default
+			.panel-heading
+				.row
+					.col-md-10
+						h4 {{.Addr}}
+					.col-md-2
+						a.btn.btn-default href="/configure/{{.Addr | urlquery}}"
+							span.glyphicon.glyphicon-pencil
+							| Edit
+			.panel-body
+				.row
+					.col-md-2
+						b Savers:
+					.col-md-2
+						| {{.Savers}}
+				.row
+					.col-md-2
+						b RenderPools:
+				.row
+					.col-md-2
+						b MinZoom
+					.col-md-2
+						b MaxZoom
+					.col-md-2
+						b PoolSize
+					.col-md-2
+						b QueueSize
+					.col-md-2
+						b RenderTTL
+				{{range .RenderPools}}
+					.row
+						.col-md-12
+							i {{.Cmd}}
+					.row
+						.col-md-2 {{.MinZoom}}
+						.col-md-2 {{.MaxZoom}}
+						.col-md-2 {{.PoolSize}}
+						.col-md-2 {{.QueueSize}}
+						.col-md-2 {{.RenderTTL}}
+				{{end}}
+				.row
+					.col-md-12
+						a.btn.btn-default href="/charts/{{.Addr | urlquery}}"
+							span.glyphicon.glyphicon-signal
+							| Monitoring
+	{{end}}

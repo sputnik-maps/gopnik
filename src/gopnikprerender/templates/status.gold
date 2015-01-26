@@ -1,0 +1,15 @@
+extends ./base
+
+block content
+	h1 {{.Page}}
+	.row
+		.col-md-10
+			.progress
+				.progress-bar role=progressbar aria-valuenow={{.Progress}} aria-valuemin=0 aria-valuemax=100 style="width: {{.Progress}}%;"
+					| {{.Progress}}%
+		.col-md-2
+			b {{.Done}} / {{.Total}}
+	javascript:
+		setTimeout(function(){
+			window.location.reload(1);
+		}, 5000);

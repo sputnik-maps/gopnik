@@ -1,0 +1,7 @@
+extends ./base
+
+block content
+	link href=/css/gopnikperf.css rel=stylesheet
+	#map.map
+	script type="text/javascript" src=/js/leaflet.js
+	script type="text/javascript" src=/js/heatmap.js

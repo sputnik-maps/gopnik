@@ -1,0 +1,24 @@
+package gopnik;
+
+message Task {
+	required uint64 x = 1;
+	required uint64 y = 2;
+	required uint64 zoom = 3;
+	required uint64 size = 4;
+}
+
+message Color {
+	required uint32 r = 1;
+	required uint32 g = 2;
+	required uint32 b = 3;
+	required uint32 a = 4;
+}
+
+message Tile {
+	required bytes png = 1;
+	optional Color single_color = 2;
+}
+
+message Result {
+	repeated Tile tiles = 1;
+}

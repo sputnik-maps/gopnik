@@ -1,0 +1,7 @@
+get_filename_component(SOURCE_DIR_PARENT_DIR ${CMAKE_SOURCE_DIR} PATH)
+
+set(GOPNIK_SAMPLE_DATA_PATH "${SOURCE_DIR_PARENT_DIR}/sampledata")
+configure_file(sampledata.h.in
+	${CMAKE_CURRENT_BINARY_DIR}/sampledata.h)
+
+set(GOPNIK_SAMPLEDATA_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}" PARENT_SCOPE)
