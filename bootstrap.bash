@@ -12,6 +12,7 @@ printHelp() {
 	echo "Options:"
 	echo
 	echo "  --version \"v0.0.0\" - Vesion"
+	echo "  --plugin \"pnlugin_package\" - Add plugin to build"
 	echo "  -h | --help - Show this help"
 	echo
 	exit 1
