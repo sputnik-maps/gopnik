@@ -25,18 +25,11 @@ var hReq400 = hmetrics2.MustRegisterPackageMetric("code_400", hmetrics2.NewCount
 var hReq500 = hmetrics2.MustRegisterPackageMetric("code_500", hmetrics2.NewCounter()).(*hmetrics2.Counter)
 
 type TileServer struct {
-	renders     []zoomRender
+	renders     *tilerender.MultiRenderPool
 	cache       gopnik.CachePluginInterface
 	saveList    *list.List
 	saveListMu  sync.RWMutex
 	removeDelay time.Duration
-}
-
-type zoomRender struct {
-	Render  *tilerender.RenderPool
-	MinZoom uint
-	MaxZoom uint
-	Tags    []string
 }
 
 type saveQueueElem struct {
@@ -48,26 +41,15 @@ var pathRegex = regexp.MustCompile(`/([0-9]+)/([0-9]+)/([0-9]+)\.png`)
 
 func NewTileServer(poolsCfg app.RenderPoolsConfig, cp gopnik.CachePluginInterface, removeDelay time.Duration) (*TileServer, error) {
 	srv := &TileServer{
-		renders:     make([]zoomRender, len(poolsCfg.RenderPools)),
 		cache:       cp,
 		saveList:    list.New(),
 		removeDelay: removeDelay,
 	}
 
-	for i := 0; i < len(srv.renders); i++ {
-		var err error
-		srv.renders[i].MinZoom = poolsCfg.RenderPools[i].MinZoom
-		srv.renders[i].MaxZoom = poolsCfg.RenderPools[i].MaxZoom
-		srv.renders[i].Tags = poolsCfg.RenderPools[i].Tags
-		srv.renders[i].Render, err = tilerender.NewRenderPool(
-			poolsCfg.RenderPools[i].Cmd, poolsCfg.RenderPools[i].PoolSize,
-			poolsCfg.RenderPools[i].QueueSize, poolsCfg.RenderPools[i].RenderTTL)
-		if err != nil {
-			return nil, err
-		}
-	}
+	var err error
+	srv.renders, err = tilerender.NewMultiRenderPool(poolsCfg)
 
-	return srv, nil
+	return srv, err
 }
 
 func (srv *TileServer) cacheMetatile(tc gopnik.TileCoord, tiles []gopnik.Tile) {
@@ -126,7 +108,7 @@ func (srv *TileServer) checkSaveQueue(coord gopnik.TileCoord) []byte {
 	return data[index].Image
 }
 
-func (srv *TileServer) serveTileRequest(render *tilerender.RenderPool, w http.ResponseWriter, r *http.Request, tc gopnik.TileCoord) {
+func (srv *TileServer) serveTileRequest(w http.ResponseWriter, r *http.Request, tc gopnik.TileCoord) {
 	if data := srv.checkSaveQueue(tc); data != nil {
 		w.Header().Set("Content-Type", "image/png")
 		_, err := w.Write(data)
@@ -140,11 +122,17 @@ func (srv *TileServer) serveTileRequest(render *tilerender.RenderPool, w http.Re
 
 	ansCh := make(chan *tilerender.RenderPoolResponse)
 
-	err := render.EnqueueRequest(metacoord, ansCh)
+	err := srv.renders.EnqueueRequest(metacoord, ansCh)
 	if err != nil {
-		log.Error("EnqueueRequest error: %v", err)
-		http.Error(w, err.Error(), 500)
-		hReq500.Inc()
+		if tilerender.IsBadCoordError(err) {
+			log.Debug("%s", err.Error())
+			http.Error(w, err.Error(), 400)
+			hReq400.Inc()
+		} else {
+			log.Error("EnqueueRequest error: %v", err)
+			http.Error(w, err.Error(), 500)
+			hReq500.Inc()
+		}
 		return
 	}
 
@@ -164,6 +152,7 @@ func (srv *TileServer) serveTileRequest(render *tilerender.RenderPool, w http.Re
 	if err != nil {
 		log.Warning("HTTP Write error: %v", err)
 	}
+	hReq200.Inc()
 }
 
 func (srv *TileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -211,36 +200,10 @@ func (srv *TileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Tags: tags,
 	}
 
-RL:
-	for _, renderCfg := range srv.renders {
-		if renderCfg.Tags != nil {
-		TL:
-			for _, cfgT := range renderCfg.Tags {
-				for _, inT := range tags {
-					if inT == cfgT {
-						continue TL
-					}
-				}
-				continue RL
-			}
-		}
-		if z < uint64(renderCfg.MinZoom) || z > uint64(renderCfg.MaxZoom) {
-			continue
-		}
-		srv.serveTileRequest(renderCfg.Render, w, r, coord)
-
-		hReq200.Inc()
-		return
-	}
-
-	log.Debug("Invalid zoom %v", z)
-	http.Error(w, "Invalid zoom", 400)
-	hReq400.Inc()
+	srv.serveTileRequest(w, r, coord)
 }
 
 func (srv *TileServer) ReloadStyle() error {
-	for _, r := range srv.renders {
-		r.Render.Reload()
-	}
+	srv.renders.Reload()
 	return nil
 }

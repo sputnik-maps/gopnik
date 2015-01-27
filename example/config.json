@@ -15,10 +15,6 @@
 		}
 	},
 	"Render": {
-		"Stylesheet":       "/tmp/MapsStyle/carto.2.xml",
-		"PoolSize":         1,
-		"QueueSize":        100,
-		"FontPath":         "/usr/share/fonts/truetype/ttf-dejavu",
 		"Addr":             ":8090",
 		"DebugAddr":        ":9090",
 		"HTTPReadTimeout":  "300s",
@@ -32,38 +28,54 @@
 		}
 	},
 	"Prerender": {
-		"Stylesheet":       "/tmp/MapsStyle/carto.2.xml",
-		"FontPath":         "/usr/share/fonts/truetype/ttf-dejavu",
-		"RenderPoolSize":   2,
-		"SaverPoolSize":    2,
+		"UIAddr":   ":8088",
+		"PerfLog": "/tmp/prerender.perf",
 		"Logging": {
 			"Backend": "Console",
-			"Level":   "Info",
+			"Level":   "Debug",
 			"Options": {
-				"Color": true
+				"Color": false
 			}
 		},
-		"Perflog": "/tmp/prerenderperf.log"
+		"Slaves": {
+			"Plugin":       "ClusterConfigPlugin",
+			"PluginConfig": {
+				"Nodes":    ["localhost:8095"]
+			}
+		}
+	},
+	"PrerenderSlave": {
+		"RPCAddr": ":8095",
+		"Logging": {
+			"Backend": "Console",
+			"Level":   "Debug",
+			"Options": {
+				"Color": false
+			}
+		}
 	},
 	"MetaSize":         8,
-	"RenderSlave":      "gopnikslave",
-	"ClusterPlugin":    "ClusterConfigPlugin",
-	"CachePlugin":      "CouchbaseCachePlugin",
-	"Plugins": {
-		"ClusterConfigPlugin": {
-			"Nodes":   ["localhost:8090"],
-		},
-		"FileCachePlugin": {
-			"Root":    "/tmp/tiles",
-			"UseHash": true
-		},
-		"FakeCachePlugin": {
-			"UseStubImage": true
-		},
-		"CouchbaseCachePlugin": {
-			"Addr":          "http://tiles@localhost:8091/",
-			"Bucket":        "tiles",
-			"UseMultilevel": true
+	"TileSize":         256,
+	"ClusterPlugin": {
+		"Plugin":       "ClusterConfigPlugin",
+		"PluginConfig": {
+			"Nodes":    ["localhost:8090"]
 		}
-	}
+	},
+	"CachePlugin": {
+					"Plugin": "SimpleFileCachePlugin",
+					"PluginConfig": {
+						"Root": "/tmp/tiles"
+					}
+	},
+	"RenderPools": [
+		{
+			"Cmd": ["./bin/gopnikslave", "-stylesheet", "sampledata/stylesheet.xml", "-pluginsPath", "/usr/lib/mapnik/2.2/input"],
+			"MinZoom":          1,
+			"MaxZoom":          8,
+			"PoolSize":         1,
+			"QueueSize":        100,
+			"RenderTTL":        10
+		}
+	]
 }

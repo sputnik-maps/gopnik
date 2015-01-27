@@ -144,7 +144,7 @@ func (srv *RouterServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// URL format: blah-blah-blah/$z/$x/$y.png
 
 	if !strings.HasSuffix(r.URL.Path, ".png") {
-		log.Debug("Invalid tile extension", r.URL.Path)
+		log.Debug("Invalid tile extension: %v", r.URL.Path)
 		http.Error(w, "Invalid tile extension", 400)
 		hReq400.Inc()
 		return

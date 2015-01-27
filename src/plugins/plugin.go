@@ -45,3 +45,11 @@ func (self *PluginStore) AddPlugin(plugin PluginFactory) error {
 	self.plugins[name] = plugin
 	return nil
 }
+
+func (self *PluginStore) String() string {
+	var resArr []string
+	for k, _ := range self.plugins {
+		resArr = append(resArr, k)
+	}
+	return fmt.Sprintf("%v", resArr)
+}

@@ -100,6 +100,9 @@ endif(TESTS)
 
 # Celero magic
 if(BENCH)
+	# Curses
+	find_package(Curses REQUIRED)
+
 	message(STATUS "Celero include dir: ${CELERO_INCLUDE_DIR}")
 	include_directories(${CELERO_INCLUDE_DIR})
 	add_custom_target(bench)

@@ -20,15 +20,7 @@ func (s *BBoxSuite) Test1(c *C) {
 		MinZoom: 9,
 		MaxZoom: 18,
 	}
-	/*
-		coord1 := gopnik.TileCoord{
-			Zoom: 14,
-			X:    9895,
-			Y:    5118,
-			Size: 1,
-		}
-		c.Check(bb.Crosses(coord1), Equals, true)
-	*/
+
 	coord2 := gopnik.TileCoord{
 		Zoom: 10,
 		X:    618,
@@ -36,21 +28,4 @@ func (s *BBoxSuite) Test1(c *C) {
 		Size: 1,
 	}
 	c.Check(bb.Crosses(coord2), Equals, false)
-	/*
-		coord3 := gopnik.TileCoord{
-			Zoom: 18,
-			X:    158462,
-			Y:    81985,
-			Size: 8,
-		}
-		c.Check(bb.Crosses(coord3), Equals, true)
-
-		coord4 := gopnik.TileCoord{
-			Zoom: 18,
-			X:    158462,
-			Y:    81985,
-			Size: 1000,
-		}
-		c.Check(bb.Crosses(coord4), Equals, true)
-	*/
 }

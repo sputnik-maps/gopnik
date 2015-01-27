@@ -1,14 +1,14 @@
 package tilerouter
 
-/* FIXME
-
 import (
-	. "gopkg.in/check.v1"
 	"net/http"
 	"strings"
 	"testing"
-	"tilerender"
 	"time"
+
+	"gopnik"
+
+	. "gopkg.in/check.v1"
 )
 
 // Hook up gocheck into the "go test" runner.
@@ -53,7 +53,7 @@ func (s *RenderSelectorSuite) TestRoute(c *C) {
 	c.Assert(err, IsNil)
 	defer rs.Stop()
 
-	coord := tilerender.TileCoord{
+	coord := gopnik.TileCoord{
 		X:    0,
 		Y:    0,
 		Zoom: 1,
@@ -71,4 +71,3 @@ func (s *RenderSelectorSuite) TestRoute(c *C) {
 		back1 != back2 || back1 != back3 || back1 != back4,
 		Equals, true)
 }
-*/

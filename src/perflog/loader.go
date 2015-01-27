@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	json "github.com/orofarne/strict-json"
 )
 
-func LoadPerf(fName string) ([]PerfLogEntry, error) {
+func LoadPerf(fName string, since, until time.Time) ([]PerfLogEntry, error) {
 	fIn, err := os.Open(fName)
 	if err != nil {
 		return nil, err
@@ -27,6 +28,12 @@ func LoadPerf(fName string) ([]PerfLogEntry, error) {
 				return nil, fmt.Errorf("Decode error: %v", err)
 			}
 		} else {
+			if !since.Equal(time.Time{}) && since.After(entry.Timestamp) {
+				continue
+			}
+			if !until.Equal(time.Time{}) && until.Before(entry.Timestamp) {
+				continue
+			}
 			result = append(result, entry)
 		}
 	}

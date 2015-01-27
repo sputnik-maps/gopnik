@@ -85,7 +85,7 @@ func (self *CacheProxyPlugin) backendIsResonable(backend *cacheProxyPluginBacken
 			return false
 		}
 	}
-	if coord.Zoom < backend.MinZoom && coord.Zoom > backend.MaxZoom {
+	if coord.Zoom < backend.MinZoom || coord.Zoom > backend.MaxZoom {
 		return false
 	}
 	return true
@@ -98,8 +98,10 @@ func (self *CacheProxyPlugin) Get(coord gopnik.TileCoord) ([]byte, error) {
 BL:
 	for _, backend := range self.backends {
 		if !self.backendIsResonable(&backend, &coord) {
+			log.Debug("Backend %v is unresonable", backend)
 			continue BL
 		}
+		log.Debug("Backend %v is resonable", backend)
 
 		data, getErr := backend.Plugin.Get(coord)
 		if getErr != nil {

@@ -23,7 +23,13 @@ func getTileColor(perfData []perflog.PerfLogEntry, coord gopnik.TileCoord, maxTi
 	metaCoord := app.App.Metatiler().TileToMetatile(&coord)
 	for _, entry := range perfData {
 		if entry.Coord.Equals(&metaCoord) {
-			return color.RGBA{255, 0, 0, uint8(math.Min((entry.RenderTime.Seconds()/maxTime)*255, 255))}, entry.RenderTime.Seconds()
+			col := color.RGBA{
+				R: 255,
+				G: 10,
+				B: 10,
+				A: uint8((entry.RenderTime.Seconds() / maxTime) * 200),
+			}
+			return col, entry.RenderTime.Seconds()
 		}
 	}
 	return color.Transparent, -1.0
@@ -44,6 +50,22 @@ func getMaxTime(perfData []perflog.PerfLogEntry, zoom uint64) float64 {
 	return maxTime
 }
 
+func convertTime(t float64) string {
+	if t < 0. {
+		return "--"
+	}
+	if t >= 86400. {
+		return fmt.Sprintf("%.2fd", t/86400.)
+	}
+	if t >= 3600. {
+		return fmt.Sprintf("%.2fh", t/3600.)
+	}
+	if t >= 60. {
+		return fmt.Sprintf("%.2fm", t/60.)
+	}
+	return fmt.Sprintf("%.2fs", t)
+}
+
 func drawTime(img *image.RGBA, t float64) error {
 	ctx := freetype.NewContext()
 	fntData, err := Asset("public/fonts/UbuntuMono-R.ttf")
@@ -60,12 +82,7 @@ func drawTime(img *image.RGBA, t float64) error {
 	ctx.SetDst(img)
 	ctx.SetClip(img.Bounds())
 	pt := freetype.Pt(30, 30)
-	var tStr string
-	if t >= 0. {
-		tStr = fmt.Sprintf("%.2fs", t)
-	} else {
-		tStr = "--"
-	}
+	tStr := convertTime(t)
 	_, err = ctx.DrawString(tStr, pt)
 	return err
 }
@@ -89,8 +106,7 @@ func genPerfTile(perfData []perflog.PerfLogEntry, coord gopnik.TileCoord, zoom u
 	img := image.NewRGBA(bounds)
 
 	mult := 256 / math.Pow(2, float64(zoom-coord.Zoom))
-	totalTimeS := float64(0)
-	count := uint(0)
+	maxTimeS := float64(-1.)
 	for x := coordMin.X; x < coordMax.X || (x == coordMin.X && x == coordMax.X); x += coord.Size {
 		for y := coordMin.Y; y < coordMax.Y || (y == coordMin.Y && y == coordMax.Y); y += coord.Size {
 			c := gopnik.TileCoord{
@@ -100,8 +116,9 @@ func genPerfTile(perfData []perflog.PerfLogEntry, coord gopnik.TileCoord, zoom u
 				Size: coord.Size,
 			}
 			col, renderTime := getTileColor(perfData, c, maxTime)
-			totalTimeS += renderTime
-			count++
+			if renderTime > maxTimeS {
+				maxTimeS = renderTime
+			}
 			rect := image.Rect(
 				int(math.Max(float64((c.X-coordMin.X)/c.Size)*mult, 0)),
 				int(math.Max(float64((c.Y-coordMin.Y)/c.Size)*mult, 0)),
@@ -111,7 +128,7 @@ func genPerfTile(perfData []perflog.PerfLogEntry, coord gopnik.TileCoord, zoom u
 		}
 	}
 
-	drawErr := drawTime(img, totalTimeS/float64(count))
+	drawErr := drawTime(img, maxTimeS)
 	if drawErr != nil {
 		spew.Dump(drawErr)
 		return nil, drawErr

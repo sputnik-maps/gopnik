@@ -22,6 +22,7 @@ func (self *MemoryKVFactory) Name() string {
 
 func (self *MemoryKVFactory) New(cfg json.RawMessage) (interface{}, error) {
 	var res = new(MemoryKV)
+	res.store = make(map[string][]byte)
 	return res, nil
 }
 
@@ -30,7 +31,7 @@ func init() {
 }
 
 func (self *MemoryKV) Get(key string) (data []byte, err error) {
-	log.Debug("Request tile by key '%v' from memory...", key)
+	log.Debug("Request data by key '%v' from memory...", key)
 	data = self.store[key]
 	return
 }
@@ -45,5 +46,4 @@ func (self *MemoryKV) Delete(key string) (err error) {
 	log.Debug("Delete data by key '%v' to memory", key)
 	delete(self.store, key)
 	return
-
 }

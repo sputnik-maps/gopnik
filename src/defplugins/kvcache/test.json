@@ -1,0 +1,11 @@
+{
+	"Plugin": "KVStorePlugin",
+	"PluginConfig": {
+		"UseMultilevel": true,
+		"Backend": {
+			"Plugin": "MemoryKV",
+			"PluginConfig": {
+			}
+		}
+	}
+}

@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/gob"
 	"expvar"
-	"fmt"
 	"net"
 	"strings"
 	"time"
@@ -14,12 +13,6 @@ import (
 	"tilerender"
 )
 
-type zoomRender struct {
-	Render  *tilerender.RenderPool
-	MinZoom uint
-	MaxZoom uint
-}
-
 type loop struct {
 	tiles      chan *tilerender.RenderPoolResponse // Render results
 	saverQueue chan *tilerender.RenderPoolResponse // Render results
@@ -28,8 +21,8 @@ type loop struct {
 	closeConn  chan int                            // Connection closed message
 	savers     []*saver                            // Save pool
 	cache      gopnik.CachePluginInterface         // Cache plugin
-	renders    []zoomRender                        // Renders
-	renderCfg  app.RenderPoolsConfig               // Renders config
+	renders    *tilerender.MultiRenderPool         // Renders
+	rendersCfg app.RenderPoolsConfig               // Renders config
 }
 
 func sArrEq(a []string, b []string) bool {
@@ -69,7 +62,7 @@ func newLoop(cache gopnik.CachePluginInterface, renderCfg app.RenderPoolsConfig,
 	l.reqTasks <- int(qSize)
 
 	// Starting render threads
-	l.renderCfg = renderCfg
+	l.rendersCfg = renderCfg
 	err := l.recreateRenders()
 	if err != nil {
 		return nil, err
@@ -114,50 +107,20 @@ func (l *loop) updateConfig(config *gopnikprerenderlib.RConfig) error {
 	}
 
 	// Renders
-	l.renderCfg = config.RenderPoolsConfig
-
-	if len(l.renders) != len(config.RenderPools) {
-		return l.recreateRenders()
-	}
-	for i := 0; i < len(l.renders); i++ {
-		if sArrEq(l.renders[i].Render.Cmd(), config.RenderPools[i].Cmd) ||
-			uint(l.renders[i].Render.QueueSize()) != config.RenderPools[i].QueueSize {
-			return l.recreateRenders()
-		}
-	}
-
-	for i := 0; i < len(l.renders); i++ {
-		l.renders[i].MinZoom = config.RenderPools[i].MinZoom
-		l.renders[i].MaxZoom = config.RenderPools[i].MaxZoom
-		l.renders[i].Render.Resize(int(config.RenderPools[i].PoolSize))
-		l.renders[i].Render.SetTTL(config.RenderPools[i].RenderTTL)
-	}
-
-	return nil
+	l.rendersCfg = config.RenderPoolsConfig
+	return l.recreateRenders()
 }
 
 func (l *loop) recreateRenders() error {
 	// Destroy
-	for _, rend := range l.renders {
-		rend.Render.Stop()
+	if l.renders != nil {
+		l.renders.Stop()
 	}
 
 	// Create
-	l.renders = make([]zoomRender, len(l.renderCfg.RenderPools))
-	for i := 0; i < len(l.renderCfg.RenderPools); i++ {
-		var err error
-		l.renders[i].MinZoom = l.renderCfg.RenderPools[i].MinZoom
-		l.renders[i].MaxZoom = l.renderCfg.RenderPools[i].MaxZoom
-		l.renders[i].Render, err = tilerender.NewRenderPool(
-			l.renderCfg.RenderPools[i].Cmd,
-			l.renderCfg.RenderPools[i].PoolSize,
-			l.renderCfg.RenderPools[i].QueueSize,
-			l.renderCfg.RenderPools[i].RenderTTL)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	var err error
+	l.renders, err = tilerender.NewMultiRenderPool(l.rendersCfg)
+	return err
 }
 
 func (l *loop) writer(conn net.Conn) {
@@ -168,7 +131,7 @@ func (l *loop) writer(conn net.Conn) {
 		Type: gopnikprerenderlib.Hello,
 		Hello: &gopnikprerenderlib.RHello{
 			SaverPool:         len(l.savers),
-			RenderPoolsConfig: l.renderCfg,
+			RenderPoolsConfig: l.rendersCfg,
 		},
 	})
 	if err != nil {
@@ -289,17 +252,9 @@ func (l *loop) Run(conn net.Conn) {
 }
 
 func (l *loop) enqueueRequest(coord gopnik.TileCoord, resCh chan<- *tilerender.RenderPoolResponse) error {
-	for _, rCfg := range l.renders {
-		if coord.Zoom < uint64(rCfg.MinZoom) || coord.Zoom > uint64(rCfg.MaxZoom) {
-			continue
-		}
-		return rCfg.Render.EnqueueRequest(coord, resCh)
-	}
-	return fmt.Errorf("Invalid zoom %v", coord.Zoom)
+	return l.renders.EnqueueRequest(coord, resCh)
 }
 
 func (l *loop) Kill() {
-	for _, render := range l.renders {
-		render.Render.Stop()
-	}
+	l.renders.Stop()
 }
