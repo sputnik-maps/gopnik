@@ -62,6 +62,7 @@ do
 	PLUGINS+=("$p")
 done
 PLUGINS_CONFIG="src/plugins_enabled/config.go"
+PLUGINS_TEST_CONFIG="src/plugins_enabled/config_test.go"
 cat << EOF > $PLUGINS_CONFIG
 package plugins_enabled
 
@@ -72,6 +73,33 @@ for p in ${PLUGINS[@]}; do
 done
 
 echo ')' >> $PLUGINS_CONFIG
+
+echo '[plugins]'
+
+cat << EOF > $PLUGINS_TEST_CONFIG
+package plugins_enabled
+
+import (
+	. "gopkg.in/check.v1"
+)
+
+EOF
+
+for p in src/defplugins/*; do
+ TEST_FILE="$p/test.json"
+ if [ -f "$TEST_FILE" ]
+ then
+ PNAME=`jq --raw-output '.Plugin' "$TEST_FILE"`
+cat << EOF >> $PLUGINS_TEST_CONFIG
+func (s *StorePluginSuite) Test$PNAME(c *C) {
+	cfg := \``cat "$TEST_FILE"`\`
+	s.GetSetTest(c, cfg)
+}
+EOF
+ fi
+done
+
+echo '[plugin tests]'
 
 echo "${bold}${magenta}Setup version...${normal}"
 VERSION_CONFIG="src/program_version/version.go"

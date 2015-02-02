@@ -1,0 +1,6 @@
+{
+	"Plugin": "SimpleFileCachePlugin",
+	"PluginConfig": {
+		"Root": "tmp/tiles.simple"
+	}
+}

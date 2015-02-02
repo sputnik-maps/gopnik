@@ -16,16 +16,16 @@ import (
 
 struct entry {
 	int offset;
-    int size;
+	int size;
 };
 
 struct meta_layout {
 	char magic[4];
-    int count; // METATILE ^ 2
-    int x, y, z; // lowest x,y of this metatile, plus z
-    struct entry index[]; // count entries
-    // Followed by the tile data
-    // The index offsets are measured from the start of the file
+	int count; // METATILE ^ 2
+	int x, y, z; // lowest x,y of this metatile, plus z
+	struct entry index[]; // count entries
+	// Followed by the tile data
+	// The index offsets are measured from the start of the file
 };
 */
 
@@ -146,7 +146,7 @@ func GetRawTileFromMetatile(r io.ReadSeeker, coord gopnik.TileCoord) ([]byte, er
 	}
 
 	size := int32(math.Sqrt(float64(ml.Count)))
-	index := (int32(coord.X)-ml.X)*size + (int32(coord.Y) - ml.Y)
+	index := (int32(coord.Y)-ml.Y)*size + (int32(coord.X) - ml.X)
 	if index >= ml.Count {
 		return nil, fmt.Errorf("Invalid index %v/%v", index, ml.Count)
 	}

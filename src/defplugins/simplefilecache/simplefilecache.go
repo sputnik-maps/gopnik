@@ -24,7 +24,11 @@ func (self *SimpleFileCachePlugin) Configure(cfg json.RawMessage) error {
 		Root: "/tmp/tiles",
 	}
 	err := json.Unmarshal(cfg, &conf)
+	if err != nil {
+		return err
+	}
 	self.root = conf.Root
+	err = os.MkdirAll(self.root, 0777)
 	return err
 }
 
