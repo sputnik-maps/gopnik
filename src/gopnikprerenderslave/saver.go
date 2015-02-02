@@ -31,12 +31,22 @@ L:
 			// Statistic for queue length
 			Stats.SaverQueue.AddPoint(float64(len(tiles)))
 
+			if t.Error != nil {
+				done <- tileReport{
+					Coord:      t.Coord,
+					RenderTime: t.RenderTime,
+					Error:      t.Error,
+				}
+				continue
+			}
+
 			beginTime := time.Now()
 			err := s.cache.Set(t.Coord, t.Tiles)
 			if err != nil {
 				done <- tileReport{
-					Coord: t.Coord,
-					Error: fmt.Errorf("Save error: %v", err),
+					Coord:      t.Coord,
+					RenderTime: t.RenderTime,
+					Error:      fmt.Errorf("Save error: %v", err),
 				}
 				continue
 			}
