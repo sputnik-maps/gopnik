@@ -22,11 +22,12 @@ var log = logging.MustGetLogger("global")
 var planFile = flag.String("plan", "", "JSON plan file (see gopnikprerenderimport)")
 
 type CopyConfig struct {
-	From    app.PluginConfig
-	To      app.PluginConfig
-	Threads int
-	Retries int
-	Logging json.RawMessage
+	From       app.PluginConfig
+	To         app.PluginConfig
+	Threads    int
+	Retries    int
+	SkipErrors bool
+	Logging    json.RawMessage
 }
 
 type Config struct {
@@ -84,6 +85,10 @@ func copyMetaTile(metaCoord gopnik.TileCoord, cfg *Config, from, to gopnik.Cache
 						log.Error("Get error: %v", err)
 						continue
 					} else {
+						if cfg.Copy.SkipErrors {
+							log.Error("Get error: %v", err)
+							return
+						}
 						log.Fatalf("Get error: %v", err)
 					}
 				}
@@ -94,6 +99,10 @@ func copyMetaTile(metaCoord gopnik.TileCoord, cfg *Config, from, to gopnik.Cache
 						log.Error("NewTile error: %v", err)
 						continue
 					} else {
+						if cfg.Copy.SkipErrors {
+							log.Error("NewTile error: %v", err)
+							return
+						}
 						log.Fatalf("NewTile error: %v", err)
 					}
 				}
@@ -117,6 +126,10 @@ TRYLOOP2:
 				log.Error("Set error: %v", err)
 				continue
 			} else {
+				if cfg.Copy.SkipErrors {
+					log.Error("Set error: %v", err)
+					return
+				}
 				log.Fatalf("Set error: %v", err)
 			}
 		}

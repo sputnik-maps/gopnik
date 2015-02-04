@@ -80,7 +80,11 @@ func EncodeMetatile(w io.Writer, coord gopnik.TileCoord, tiles []gopnik.Tile) er
 		Z:     int32(coord.Zoom),
 	}
 	offset := int32(20 + 8*len(tiles)) // sizeof(metaLayout)
-	for _, tile := range tiles {
+	size := int(coord.Size)
+
+	for i := 0; i < len(tiles); i++ {
+		tile := tiles[(i%size)*size+i/size]
+
 		ml.Index = append(ml.Index, metaEntry{
 			Offset: offset,
 			Size:   int32(len(tile.Image)),
@@ -90,7 +94,9 @@ func EncodeMetatile(w io.Writer, coord gopnik.TileCoord, tiles []gopnik.Tile) er
 	if err := encodeHeader(w, ml); err != nil {
 		return nil
 	}
-	for _, tile := range tiles {
+	for i := 0; i < len(tiles); i++ {
+		tile := tiles[(i%size)*size+i/size]
+
 		if _, err := w.Write(tile.Image); err != nil {
 			return nil
 		}
@@ -146,7 +152,7 @@ func GetRawTileFromMetatile(r io.ReadSeeker, coord gopnik.TileCoord) ([]byte, er
 	}
 
 	size := int32(math.Sqrt(float64(ml.Count)))
-	index := (int32(coord.Y)-ml.Y)*size + (int32(coord.X) - ml.X)
+	index := (int32(coord.X)-ml.X)*size + (int32(coord.Y) - ml.Y)
 	if index >= ml.Count {
 		return nil, fmt.Errorf("Invalid index %v/%v", index, ml.Count)
 	}
