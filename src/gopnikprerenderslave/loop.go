@@ -10,6 +10,7 @@ import (
 	"app"
 	"gopnik"
 	"gopnikprerenderlib"
+	"perflog"
 	"tilerender"
 )
 
@@ -181,6 +182,15 @@ L:
 				conn.Close()
 				break L
 			}
+
+			// Save statistic to perflog
+			perflog.SavePerf(perflog.PerfLogEntry{
+				Coord:      tr.Coord,
+				Timestamp:  time.Now(),
+				RenderTime: tr.RenderTime,
+				SaverTime:  tr.SaveTime,
+			})
+
 		case <-monitoringTicker:
 			monData := expvar.Get("metrics").String()
 			log.Debug("Monitoring: %v", monData)
