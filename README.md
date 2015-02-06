@@ -1,10 +1,10 @@
 GOPNIK
 ======
+Gopnik is a tile server and a render for slippy map based on mapnik library.
+See [sputnik-maps.github.io/gopnik](http://sputnik-maps.github.io/gopnik/)
 
-INSTALL
--------
+BUILD
+=====
 
-    ./configure
-    make
-    make test
-    make bench
+    ./bootstrap.bash
+    ./build.bash
