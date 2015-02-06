@@ -1,8 +1,5 @@
-_vendor
 pkg
 bin
-
-Makefile
 
 src/plugins_enabled/config.go
 src/program_version/version.go
@@ -10,10 +7,12 @@ src/gopnikprerender/bindata.go
 src/gopnikperf/bindata.go
 src/sampledata/bindata.go
 src/sampledata/env.go
+src/plugins_enabled/config_test.go
 
 src/tilerender/slave
 slave_build
 cover_report
+tmp
 
 *.sublime-workspace
 *.swp

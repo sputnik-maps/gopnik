@@ -1,7 +1,7 @@
 {
 	"Plugin": "FileCachePlugin",
 	"PluginConfig": {
-		"Root": "tmp/tiles.meta",
+		"Root": "../../tmp/tiles.meta",
 		"UseHash": true
 	}
 }
