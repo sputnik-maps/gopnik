@@ -22,6 +22,8 @@ type FileCachePlugin struct {
 }
 
 func (self *FileCachePlugin) Configure(cfg json.RawMessage) error {
+	self.cfg.Root = "/tmp/tiles"
+	self.cfg.UseHash = true
 	return json.Unmarshal(cfg, &self.cfg)
 }
 

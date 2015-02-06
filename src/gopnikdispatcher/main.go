@@ -26,12 +26,12 @@ type DispatcherConfig struct {
 	PingPeriod       string           // Ping gopniks every PingPeriod
 	Threads          int              // GOMAXPROCS
 	Logging          json.RawMessage  // see loghelper.go
+	ClusterPlugin    app.PluginConfig // dynamic rendering cluster
 	FilterPlugin     app.PluginConfig // coordinate filter
 }
 
 type Config struct {
 	Dispatcher       DispatcherConfig //
-	ClusterPlugin    app.PluginConfig //
 	CachePlugin      app.PluginConfig //
 	app.CommonConfig                  //
 	json.OtherKeys                    //
@@ -59,7 +59,7 @@ func main() {
 
 	app.App.Configure("Dispatcher", &cfg)
 
-	clI, err := plugins.DefaultPluginStore.Create(cfg.ClusterPlugin.Plugin, cfg.ClusterPlugin.PluginConfig)
+	clI, err := plugins.DefaultPluginStore.Create(cfg.Dispatcher.ClusterPlugin.Plugin, cfg.Dispatcher.ClusterPlugin.PluginConfig)
 	if err != nil {
 		log.Fatal(err)
 	}

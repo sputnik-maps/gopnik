@@ -8,6 +8,7 @@ import (
 	"app"
 	"gopnik"
 	"gopnikprerenderlib"
+	"perflog"
 	"plugins"
 	_ "plugins_enabled"
 	"servicestatus"
@@ -64,6 +65,11 @@ func main() {
 	cp, ok := cpI.(gopnik.CachePluginInterface)
 	if !ok {
 		log.Fatal("Invalid cache plugin type")
+	}
+
+	// Setup perflog
+	if cfg.PrerenderSlave.PerfLog != "" {
+		perflog.SetupPerflog(cfg.PrerenderSlave.PerfLog)
 	}
 
 	servicestatus.SetOK() // Service is Ok if renders starts

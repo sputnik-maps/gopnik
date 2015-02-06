@@ -3,12 +3,15 @@ package main
 import (
 	"flag"
 	"fmt"
+	"math/rand"
 	"os"
 	"strings"
+	"time"
 
 	"app"
 	"gopnik"
 	"gopnikprerenderlib"
+	"perflog"
 
 	"github.com/op/go-logging"
 	json "github.com/orofarne/strict-json"
@@ -31,6 +34,12 @@ var allWorld = flag.Bool("world", false, "render world for current zoom")
 var doAppend = flag.Bool("append", false, "Append data to plan file")
 
 var tagsF = flag.String("tags", "", "comma separetad list of tags")
+
+var subtractPerflog = flag.String("subtractPerflog", "", "subtract perflog items")
+var subtractPerflogSince = flag.String("subtractPerflogSince", "", "Use values since time (RFC3339 or @UnixTimestamp)")
+var subtractPerflogUntil = flag.String("subtractPerflogUntil", "", "Use values until time (RFC3339 or @UnixTimestamp)")
+
+var shuffle = flag.Bool("shuffle", false, "Shuffle plan")
 
 func parseZoom(zoomString string) (res []uint64, err error) {
 	elems := strings.Split(zoomString, ",")
@@ -82,6 +91,43 @@ func latLon(zoom uint64) (coords []gopnik.TileCoord, err error) {
 		coords, err = genCoords(bbox, zoom)
 	}
 	return
+}
+
+func parseTime(str string) (time.Time, error) {
+	if str == "" {
+		return time.Time{}, nil
+	}
+
+	if str[0] == '@' {
+		var unixts int64
+		_, err := fmt.Sscanf(str, "@%v", &unixts)
+		if err != nil {
+			return time.Time{}, err
+		}
+		return time.Unix(unixts, 0), nil
+	} else {
+		return time.Parse(time.RFC3339, str)
+	}
+}
+
+func subtractPerflogItems(coords []gopnik.TileCoord, perflogData []perflog.PerfLogEntry) []gopnik.TileCoord {
+	for i := 0; i < len(coords); i++ {
+		for _, logLine := range perflogData {
+			if coords[i].Equals(&logLine.Coord) {
+				coords = coords[:i+copy(coords[i:], coords[i+1:])]
+				i--
+				break
+			}
+		}
+	}
+	return coords
+}
+
+func shuffleCoords(coords []gopnik.TileCoord) {
+	for i := range coords {
+		j := rand.Intn(i + 1)
+		coords[i], coords[j] = coords[j], coords[i]
+	}
 }
 
 func main() {
@@ -162,6 +208,29 @@ func main() {
 			}
 			coords = append(coords, flagCoords...)
 		}
+	}
+
+	if *subtractPerflog != "" {
+		sinceT, err := parseTime(*subtractPerflogSince)
+		if err != nil {
+			log.Fatalf("Invalid since param: %v", err)
+		}
+		untilT, err := parseTime(*subtractPerflogUntil)
+		if err != nil {
+			log.Fatalf("Invalid unitl param: %v", err)
+		}
+
+		perfData, err := perflog.LoadPerf(*subtractPerflog, sinceT, untilT)
+		if err != nil {
+			log.Fatalf("Failed to load performance log: %v", err)
+		}
+
+		coords = subtractPerflogItems(coords, perfData)
+	}
+
+	if *shuffle {
+		rand.Seed(time.Now().UnixNano())
+		shuffleCoords(coords)
 	}
 
 	fout, err := os.OpenFile(*planFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)

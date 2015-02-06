@@ -12,6 +12,7 @@ type PrerenderSlaveConfig struct {
 	RPCAddr       string          // Bind RPC addr
 	DebugAddr     string          // Address for statistics
 	Logging       json.RawMessage // see loghelper.go
+	PerfLog       string          // Performance log file
 }
 
 type PrerenderConfig struct {
