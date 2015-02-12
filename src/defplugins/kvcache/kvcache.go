@@ -33,14 +33,16 @@ func (col u8Color) RGBA() (r, g, b, a uint32) {
 var colorBlack = u8Color{0, 0, 0}
 
 type kvstoreCachePluginConf struct {
-	Backend       app.PluginConfig
-	UseMultilevel bool
-	Prefix        string
+	Backend             app.PluginConfig
+	UseMultilevel       bool
+	UseSecondLevelCache bool
+	Prefix              string
 }
 
 type KVStorePlugin struct {
-	config kvstoreCachePluginConf
-	store  gopnik.KVStore
+	config  kvstoreCachePluginConf
+	store   gopnik.KVStore
+	cache2L map[u8Color][]byte
 }
 
 func (self *KVStorePlugin) Configure(cfg json.RawMessage) error {
@@ -59,6 +61,11 @@ func (self *KVStorePlugin) Configure(cfg json.RawMessage) error {
 	if !ok {
 		return fmt.Errorf("Invalid KV plugin")
 	}
+
+	if self.config.UseSecondLevelCache {
+		self.cache2L = make(map[u8Color][]byte)
+	}
+
 	return nil
 }
 
@@ -90,6 +97,16 @@ func (self *KVStorePlugin) parseSecondLevel(metacoord, coord gopnik.TileCoord, d
 		// Empty!
 		return nil, nil
 	}
+
+	// Check cache
+	if self.config.UseSecondLevelCache {
+		img := self.cache2L[col]
+		if img != nil {
+			return img, nil
+		}
+	}
+
+	// Generate image
 	bounds := image.Rect(0, 0, 256, 256)
 	img := image.NewRGBA(bounds)
 	for x := bounds.Min.X; x < bounds.Max.X; x++ {
@@ -102,7 +119,14 @@ func (self *KVStorePlugin) parseSecondLevel(metacoord, coord gopnik.TileCoord, d
 	if err != nil {
 		return nil, err
 	}
-	return outbuf.Bytes(), nil
+	imgData := outbuf.Bytes()
+
+	// Save image to cache
+	if self.config.UseSecondLevelCache {
+		self.cache2L[col] = imgData
+	}
+
+	return imgData, nil
 }
 
 func (self *KVStorePlugin) Get(coord gopnik.TileCoord) ([]byte, error) {
