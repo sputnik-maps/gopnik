@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"image"
 	"image/png"
+	"sync"
 
 	"app"
 	"gopnik"
@@ -40,9 +41,10 @@ type kvstoreCachePluginConf struct {
 }
 
 type KVStorePlugin struct {
-	config  kvstoreCachePluginConf
-	store   gopnik.KVStore
-	cache2L map[u8Color][]byte
+	config    kvstoreCachePluginConf
+	store     gopnik.KVStore
+	cache2L   map[u8Color][]byte
+	cache2LMu sync.RWMutex
 }
 
 func (self *KVStorePlugin) Configure(cfg json.RawMessage) error {
@@ -100,7 +102,9 @@ func (self *KVStorePlugin) parseSecondLevel(metacoord, coord gopnik.TileCoord, d
 
 	// Check cache
 	if self.config.UseSecondLevelCache {
+		self.cache2LMu.RLock()
 		img := self.cache2L[col]
+		self.cache2LMu.RUnlock()
 		if img != nil {
 			return img, nil
 		}
@@ -123,7 +127,9 @@ func (self *KVStorePlugin) parseSecondLevel(metacoord, coord gopnik.TileCoord, d
 
 	// Save image to cache
 	if self.config.UseSecondLevelCache {
+		self.cache2LMu.Lock()
 		self.cache2L[col] = imgData
+		self.cache2LMu.Unlock()
 	}
 
 	return imgData, nil
