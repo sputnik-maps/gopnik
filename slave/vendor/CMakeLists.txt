@@ -2,8 +2,13 @@ include(ExternalProject)
 
 #gtest
 if(TESTS)
+  set(GTEST_URL "http://googletest.googlecode.com/files/gtest-1.7.0.zip")
+  if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/gtest-1.7.0.zip")
+    set(GTEST_URL "${CMAKE_CURRENT_SOURCE_DIR}/gtest-1.7.0.zip")
+  endif()
+
   ExternalProject_Add(gtest
-    URL "http://googletest.googlecode.com/files/gtest-1.7.0.zip"
+    URL ${GTEST_URL}
     URL_MD5 "2d6ec8ccdf5c46b05ba54a9fd1d130d7"
     DOWNLOAD_DIR ${CMAKE_CURRENT_BINARY_DIR}
     SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/gtest-1.7.0
@@ -18,8 +23,13 @@ if(TESTS)
 endif(TESTS)
 
 if(BENCH)
+  set(CELERO_URL "https://github.com/DigitalInBlue/Celero/archive/v1.0.5.tar.gz")
+  if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/v1.0.5.tar.gz")
+    set(CELERO_URL "${CMAKE_CURRENT_SOURCE_DIR}/v1.0.5.tar.gz")
+  endif()
+
   ExternalProject_Add(celero
-    URL "https://github.com/DigitalInBlue/Celero/archive/v1.0.5.tar.gz"
+    URL ${CELERO_URL}
     URL_MD5 "e2e19b8ebe89591e3e75efa1c16ed7bd"
     DOWNLOAD_DIR ${CMAKE_CURRENT_BINARY_DIR}
     SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/Celero
