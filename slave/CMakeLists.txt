@@ -36,8 +36,8 @@ endif ()
 message(STATUS "CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
 
 # ICU
-find_package(ICU REQUIRED)
-include_directories(${ICU_INCLUDE_DIRS})
+#find_package(ICU REQUIRED)
+#include_directories(${ICU_INCLUDE_DIRS})
 
 # Setup boost
 find_package( Boost 1.48.0 COMPONENTS system filesystem program_options REQUIRED )
