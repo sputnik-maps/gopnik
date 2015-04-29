@@ -7,16 +7,12 @@ import (
 	"gopnik"
 	"sampledata"
 
-	. "gopkg.in/check.v1"
+	"github.com/stretchr/testify/require"
 )
 
-type RenderPoolSuite struct{}
-
-var _ = Suite(&RenderPoolSuite{})
-
-func (s *RenderPoolSuite) TestOneRender(c *C) {
+func TestOneRender(t *testing.T) {
 	rpool, err := NewRenderPool(sampledata.SlaveCmd, 1, 1, 0)
-	c.Assert(err, IsNil)
+	require.Nil(t, err)
 
 	coord := gopnik.TileCoord{
 		X:    0,
@@ -26,18 +22,18 @@ func (s *RenderPoolSuite) TestOneRender(c *C) {
 	}
 	ansCh := make(chan *RenderPoolResponse)
 	err = rpool.EnqueueRequest(coord, ansCh)
-	c.Assert(err, IsNil)
+	require.Nil(t, err)
 	ans := <-ansCh
-	c.Assert(ans.Error, IsNil)
-	c.Assert(len(ans.Tiles), Equals, 1)
-	sampledata.CheckTile(c, ans.Tiles[0].Image, "1_0_0.png")
+	require.Nil(t, ans.Error)
+	require.Equal(t, len(ans.Tiles), 1)
+	sampledata.CheckTile(t, ans.Tiles[0].Image, "1_0_0.png")
 }
 
-func (s *RenderPoolSuite) Test5Renders(c *C) {
+func Test5Renders(t *testing.T) {
 	const nTiles = 15
 
 	rpool, err := NewRenderPool(sampledata.SlaveCmd, 5, nTiles, 0)
-	c.Assert(err, IsNil)
+	require.Nil(t, err)
 
 	coord := gopnik.TileCoord{
 		X:    0,
@@ -48,19 +44,19 @@ func (s *RenderPoolSuite) Test5Renders(c *C) {
 	ansCh := make(chan *RenderPoolResponse)
 	for i := 0; i < nTiles; i++ {
 		err = rpool.EnqueueRequest(coord, ansCh)
-		c.Assert(err, IsNil)
+		require.Nil(t, err)
 	}
 	for i := 0; i < nTiles; i++ {
 		ans := <-ansCh
-		c.Assert(ans.Error, IsNil)
-		c.Assert(len(ans.Tiles), Equals, 1)
-		sampledata.CheckTile(c, ans.Tiles[0].Image, "1_0_0.png")
+		require.Nil(t, ans.Error)
+		require.Equal(t, len(ans.Tiles), 1)
+		sampledata.CheckTile(t, ans.Tiles[0].Image, "1_0_0.png")
 	}
 }
 
-func (s *RenderPoolSuite) TestTTL(c *C) {
+func TestTTL(t *testing.T) {
 	rpool, err := NewRenderPool(sampledata.SlaveCmd, 1, 4, 2)
-	c.Assert(err, IsNil)
+	require.Nil(t, err)
 
 	ansCh := make(chan *RenderPoolResponse)
 	for i := 0; i < 2; i++ {
@@ -72,19 +68,19 @@ func (s *RenderPoolSuite) TestTTL(c *C) {
 				Size: 1,
 			}
 			err = rpool.EnqueueRequest(coord, ansCh)
-			c.Assert(err, IsNil)
+			require.Nil(t, err)
 		}
 	}
 	for i := 0; i < 4; i++ {
 		ans := <-ansCh
-		c.Assert(ans.Error, IsNil)
-		c.Assert(len(ans.Tiles), Equals, 1)
+		require.Nil(t, ans.Error)
+		require.Equal(t, len(ans.Tiles), 1)
 	}
 }
 
-func (s *RenderPoolSuite) TestOneRender4Tiles(c *C) {
+func TestOneRender4Tiles(t *testing.T) {
 	rpool, err := NewRenderPool(sampledata.SlaveCmd, 1, 1, 0)
-	c.Assert(err, IsNil)
+	require.Nil(t, err)
 
 	coord := gopnik.TileCoord{
 		X:    0,
@@ -94,13 +90,13 @@ func (s *RenderPoolSuite) TestOneRender4Tiles(c *C) {
 	}
 	ansCh := make(chan *RenderPoolResponse)
 	err = rpool.EnqueueRequest(coord, ansCh)
-	c.Assert(err, IsNil)
+	require.Nil(t, err)
 	ans := <-ansCh
-	c.Assert(ans.Error, IsNil)
-	c.Assert(len(ans.Tiles), Equals, 4)
+	require.Nil(t, ans.Error)
+	require.Equal(t, len(ans.Tiles), 4)
 	for i := 0; i < 2; i++ {
 		for j := 0; j < 2; j++ {
-			sampledata.CheckTile(c, ans.Tiles[i*2+j].Image,
+			sampledata.CheckTile(t, ans.Tiles[i*2+j].Image,
 				fmt.Sprintf("1_%d_%d.png", j, i))
 		}
 	}

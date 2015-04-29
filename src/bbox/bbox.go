@@ -11,7 +11,7 @@ type BBox struct {
 	MinZoom, MaxZoom uint64
 }
 
-func minMax(a, b uint64) (min, max uint64) {
+func minMax(a, b float64) (min, max float64) {
 	if a > b {
 		min = b
 		max = a
@@ -22,11 +22,11 @@ func minMax(a, b uint64) (min, max uint64) {
 	return
 }
 
-func contains(min, max, x uint64) bool {
-	return x > min && x < max
+func contains(min, max, x float64) bool {
+	return x >= min && x <= max
 }
 
-func crosses(xMin, xMax, yMin, yMax uint64) bool {
+func crosses(xMin, xMax, yMin, yMax float64) bool {
 	return contains(xMin, xMax, yMin) ||
 		contains(xMin, xMax, yMax) ||
 		contains(yMin, yMax, xMin) ||
@@ -38,16 +38,20 @@ func (bb *BBox) Crosses(coord gopnik.TileCoord) bool {
 		return false
 	}
 
-	bbCoord1 := gproj.FromLLToCoord(bb.MinLat, bb.MinLon, coord.Zoom)
-	bbCoord2 := gproj.FromLLToCoord(bb.MaxLat, bb.MaxLon, coord.Zoom)
+	lat1, lon1, _ := gproj.FromCoordToLL(coord)
+	lat2, lon2, _ := gproj.FromCoordToLL(gopnik.TileCoord{
+		X:    coord.X + coord.Size,
+		Y:    coord.Y + coord.Size,
+		Zoom: coord.Zoom,
+	})
 
-	bbMinX, bbMaxX := minMax(bbCoord1.X, bbCoord2.X)
-	bbMinY, bbMaxY := minMax(bbCoord1.Y, bbCoord2.Y)
+	latMin, latMax := minMax(lat1, lat2)
+	lonMin, lonMax := minMax(lon1, lon2)
 
-	if !crosses(bbMinX, bbMaxX, coord.X, coord.X+coord.Size) {
+	if !crosses(bb.MinLat, bb.MaxLat, latMin, latMax) {
 		return false
 	}
-	if !crosses(bbMinY, bbMaxY, coord.Y, coord.Y+coord.Size) {
+	if !crosses(bb.MinLon, bb.MaxLon, lonMin, lonMax) {
 		return false
 	}
 	return true

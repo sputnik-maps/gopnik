@@ -2,26 +2,22 @@ package gopnik
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestMetatilerCreate(t *testing.T) {
 	metatiler := NewMetatiler(8, 256)
 
-	if metatiler.TileSize() != 256 {
-		t.Errorf("Invalid TileSize: %v != 256", metatiler.TileSize())
-	}
+	assert.Equal(t, metatiler.TileSize(), uint64(256), "Invalid TileSize")
 }
 
 func TestMetatilerNormalZoom(t *testing.T) {
 	metatiler := NewMetatiler(8, 256)
 
-	if metatiler.MetaSize(uint64(10)) != 8 {
-		t.Errorf("Invalid MetaSize(10): %v != 8", metatiler.MetaSize(uint64(10)))
-	}
+	assert.Equal(t, metatiler.MetaSize(uint64(10)), uint64(8), "Invalid MetaSize(10)")
 
-	if metatiler.NTiles(uint64(10)) != 8*8 {
-		t.Errorf("Invalid NTiles(10): %v != %v", metatiler.NTiles(uint64(10)), 8*8)
-	}
+	assert.Equal(t, metatiler.NTiles(uint64(10)), uint64(8*8), "Invalid NTiles(10)")
 }
 
 func TestMetatilerCoordNormalZoom(t *testing.T) {
@@ -43,21 +39,15 @@ func TestMetatilerCoordNormalZoom(t *testing.T) {
 
 	metaCoord := metatiler.TileToMetatile(&coord)
 
-	if !metaCoordMaster.Equals(&metaCoord) {
-		t.Errorf("Coords differs: %v != %v", metaCoord, metaCoordMaster)
-	}
+	assert.True(t, metaCoordMaster.Equals(&metaCoord))
 }
 
 func TestMetatiler1Zoom(t *testing.T) {
 	metatiler := NewMetatiler(8, 256)
 
-	if metatiler.MetaSize(uint64(1)) != 2 {
-		t.Errorf("Invalid MetaSize(1): %v != 2", metatiler.MetaSize(uint64(1)))
-	}
+	assert.NotEqual(t, metatiler.MetaSize(uint64(1)), 2, "Invalid MetaSize(1)")
 
-	if metatiler.NTiles(uint64(1)) != 2*2 {
-		t.Errorf("Invalid NTiles(1): %v != %v", metatiler.NTiles(uint64(1)), 2*2)
-	}
+	assert.NotEqual(t, metatiler.NTiles(uint64(1)), 2*2, "Invalid NTiles(1)")
 }
 
 func TestMetatilerCoord1Zoom(t *testing.T) {
@@ -79,7 +69,5 @@ func TestMetatilerCoord1Zoom(t *testing.T) {
 
 	metaCoord := metatiler.TileToMetatile(&coord)
 
-	if !metaCoordMaster.Equals(&metaCoord) {
-		t.Errorf("Coords differs: %v != %v", metaCoord, metaCoordMaster)
-	}
+	assert.True(t, metaCoordMaster.Equals(&metaCoord), "Coords differs")
 }

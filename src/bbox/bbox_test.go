@@ -1,16 +1,14 @@
 package bbox
 
 import (
+	"testing"
+
 	"gopnik"
 
-	. "gopkg.in/check.v1"
+	"github.com/stretchr/testify/require"
 )
 
-type BBoxSuite struct{}
-
-var _ = Suite(&BBoxSuite{})
-
-func (s *BBoxSuite) Test1(c *C) {
+func TestBBoxInnerTileShouldCrossBBox(t *testing.T) {
 	// Moscow
 	bb := BBox{
 		MinLat:  55.542618983877674,
@@ -21,11 +19,33 @@ func (s *BBoxSuite) Test1(c *C) {
 		MaxZoom: 18,
 	}
 
-	coord2 := gopnik.TileCoord{
-		Zoom: 10,
-		X:    618,
-		Y:    419,
+	coord := gopnik.TileCoord{
+		Zoom: 16,
+		X:    39614,
+		Y:    20483,
 		Size: 1,
 	}
-	c.Check(bb.Crosses(coord2), Equals, false)
+
+	require.True(t, bb.Crosses(coord))
+}
+
+func TestBBoxOuterTileShouldNotCrossBBox(t *testing.T) {
+	// Moscow
+	bb := BBox{
+		MinLat:  54.190566,
+		MaxLat:  56.972679,
+		MinLon:  35.094452,
+		MaxLon:  40.321198,
+		MinZoom: 9,
+		MaxZoom: 18,
+	}
+
+	coord2 := gopnik.TileCoord{
+		Zoom: 16,
+		X:    40212,
+		Y:    20421,
+		Size: 1,
+	}
+
+	require.False(t, bb.Crosses(coord2))
 }
