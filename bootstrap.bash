@@ -42,6 +42,10 @@ done
 
 echo "${bold}${magenta}Generating Go code...${normal}"
 protoc --go_out=src/tilerender slave/proto/*.proto
+for file in `ls thrift/*.thrift`
+do
+	thrift -gen go -I thrift -out src $file
+done
 go-bindata -o src/gopnikprerender/bindata.go  -prefix "src/gopnikprerender/" src/gopnikprerender/public/fonts/ src/gopnikprerender/public/css/ src/gopnikprerender/public/js/ src/gopnikprerender/templates/
 go-bindata -o src/gopnikperf/bindata.go  -prefix "src/gopnikperf/" src/gopnikperf/public/fonts/ src/gopnikperf/public/css/ src/gopnikperf/public/css/images src/gopnikperf/public/js/ src/gopnikperf/templates/
 go-bindata -o src/sampledata/bindata.go -pkg "sampledata"  -prefix "sampledata_tiles" sampledata_tiles/

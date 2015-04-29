@@ -1,19 +1,21 @@
-pkg
-bin
+/pkg
+/bin
 
-src/plugins_enabled/config.go
-src/program_version/version.go
-src/gopnikprerender/bindata.go
-src/gopnikperf/bindata.go
-src/sampledata/bindata.go
-src/sampledata/env.go
-src/plugins_enabled/config_test.go
+/src/plugins_enabled/config.go
+/src/program_version/version.go
+/src/gopnikprerender/bindata.go
+/src/gopnikperf/bindata.go
+/src/sampledata/bindata.go
+/src/sampledata/env.go
+/src/plugins_enabled/config_test.go
 
-src/tilerender/slave
-slave_build
-cover_report
-tmp
+/src/tilerender/slave
+/slave_build/
+/cover_report/
+/tmp/
+/src/plugins_enabled/tmp/
+/_vendor/
+/src/gopnikrpc/
 
 *.sublime-workspace
 *.swp
-/_vendor
