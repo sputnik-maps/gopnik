@@ -16,3 +16,4 @@ tmp
 
 *.sublime-workspace
 *.swp
+/_vendor

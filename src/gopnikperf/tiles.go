@@ -14,9 +14,9 @@ import (
 	"gproj"
 	"perflog"
 
-	"code.google.com/p/freetype-go/freetype"
-	"code.google.com/p/freetype-go/freetype/truetype"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/orofarne/freetype-go/freetype"
+	"github.com/orofarne/freetype-go/freetype/truetype"
 )
 
 func getTileColor(perfData []perflog.PerfLogEntry, coord gopnik.TileCoord, maxTime float64) (col color.Color, renderTimeSeconds float64) {
