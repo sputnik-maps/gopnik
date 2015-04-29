@@ -36,10 +36,10 @@ endif ()
 message(STATUS "CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
 
 # ICU
-if (APPLE)
+if (NOT APPLE)
 	find_package(ICU REQUIRED)
 	include_directories(${ICU_INCLUDE_DIRS})
-endif(APPLE)
+endif(NOT APPLE)
 
 # Setup boost
 find_package( Boost 1.48.0 COMPONENTS system filesystem program_options REQUIRED )
