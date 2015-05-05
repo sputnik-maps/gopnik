@@ -23,7 +23,7 @@ make install
 cd - > /dev/null
 
 echo "${bold}${magenta}Running Go test code...${normal}"
-TEST_MODULES="`find ./src -name '*_test.go' | sed 's#^\./src/##' | sed 's#/[^/]\+$##' | sort | uniq | while read p; do echo -n \"$p \"; done`"
+TEST_MODULES="`find ./src -name '*_test.go' | perl -e 'while (<>) { if( $_ =~ /^\.\/src\/(.*)\/[^\/]*$/ ) { print "$1\n" } }' | sort | uniq | while read p; do echo -n \"$p \"; done`"
 go test $TEST_MODULES
 
 echo "${bold}${magenta}Running C++ test code...${normal}"

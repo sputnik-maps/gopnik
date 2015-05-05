@@ -1,7 +1,7 @@
 #include "loop.hpp"
 
 #include <unistd.h>
-#include <endian.h>
+#include "portable_endian.h"
 
 #include <cstdint>
 #include <vector>

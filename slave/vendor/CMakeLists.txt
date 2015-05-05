@@ -1,5 +1,11 @@
 include(ExternalProject)
 
+if (APPLE)
+  set(SO "dylib")
+else ()
+  set(SO "so")
+endif()
+
 #gtest
 if(TESTS)
   set(GTEST_URL "http://googletest.googlecode.com/files/gtest-1.7.0.zip")
@@ -39,5 +45,5 @@ if(BENCH)
   )
 
   set(CELERO_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/Celero/include" PARENT_SCOPE)
-  set(CELERO_LIBRARY "${CMAKE_CURRENT_BINARY_DIR}/Celero/libcelero.so" PARENT_SCOPE)
+  set(CELERO_LIBRARY "${CMAKE_CURRENT_BINARY_DIR}/Celero/libcelero.${SO}" PARENT_SCOPE)
 endif(BENCH)
