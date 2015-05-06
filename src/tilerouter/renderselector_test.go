@@ -49,7 +49,7 @@ func TestRoute(t *testing.T) {
 	for _, r := range renders {
 		go runFakeRender(r)
 	}
-	time.Sleep(time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 
 	rs, err := NewRenderSelector(renders, time.Second, 30*time.Second)
 	require.Nil(t, err)

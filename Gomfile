@@ -1,6 +1,7 @@
 gom "github.com/cheggaaa/pb"
 gom "github.com/davecgh/go-spew/spew"
 gom "github.com/golang/protobuf/proto"
+gom "github.com/golang/protobuf/protoc-gen-go"
 gom "github.com/go-martini/martini"
 gom "github.com/martini-contrib/staticbin"
 gom "github.com/op/go-logging"
