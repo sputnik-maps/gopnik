@@ -3,9 +3,9 @@ package tileserver
 import (
 	"git.apache.org/thrift.git/lib/go/thrift"
 
-	"gopnik"
 	"gopnikrpc"
 	"gopnikrpc/types"
+	"gopnikrpcutils"
 )
 
 type thriftTileServer struct {
@@ -13,37 +13,14 @@ type thriftTileServer struct {
 }
 
 func (self *thriftTileServer) Render(coord *types.Coord, prio gopnikrpc.Priority, wait_storage bool) (r *types.Tile, err error) {
-	tc := gopnik.TileCoord{
-		X:    uint64(coord.X),
-		Y:    uint64(coord.Y),
-		Zoom: uint64(coord.Zoom),
-		Size: uint64(coord.Size),
-	}
-
-	for tag, _ := range coord.Tags {
-		tc.Tags = append(tc.Tags, tag)
-	}
+	tc := gopnikrpcutils.CoordFromRPC(coord)
 
 	tile, err := self.tileServer.ServeTileRequest(tc)
 	if err != nil {
 		return nil, err
 	}
 
-	r = &types.Tile{
-		Image: tile.Image,
-	}
-
-	if tile.SingleColor != nil {
-		cr, cg, cb, ca := tile.SingleColor.RGBA()
-		r.Color = &types.Color{
-			R: int32(cr),
-			G: int32(cg),
-			B: int32(cb),
-			A: int32(ca),
-		}
-	}
-
-	return
+	return gopnikrpcutils.TileToRPC(tile), nil
 }
 
 func (self *thriftTileServer) Status() (r bool, err error)    { return true, nil }

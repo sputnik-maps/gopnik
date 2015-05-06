@@ -1,47 +1,47 @@
 package tilerouter
 
 import (
-	"net/http"
-	"strings"
+	"gopnikrpc"
+	"gopnikrpc/types"
 	"testing"
 	"time"
 
+	"git.apache.org/thrift.git/lib/go/thrift"
+	"github.com/stretchr/testify/require"
+
 	"gopnik"
-
-	. "gopkg.in/check.v1"
 )
-
-// Hook up gocheck into the "go test" runner.
-func Test(t *testing.T) { TestingT(t) }
-
-type RenderSelectorSuite struct{}
-
-var _ = Suite(&RenderSelectorSuite{})
 
 type fakeRender struct {
 }
 
-func (srv *fakeRender) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if strings.HasSuffix(r.URL.String(), "/status") {
-		w.Write([]byte{'O', 'k'})
-		return
-	}
-	http.Error(w, "Invalid request", 400)
+func (self *fakeRender) Status() (r bool, err error)    { return true, nil }
+func (self *fakeRender) Version() (r string, err error) { return "?", nil }
+func (self *fakeRender) Config() (r string, err error)  { return "?", nil }
+func (self *fakeRender) Stat() (r map[string]float64, err error) {
+	return map[string]float64{}, nil
+}
+func (self *fakeRender) Render(coord *types.Coord, prio gopnikrpc.Priority, wait_storage bool) (r *types.Tile, err error) {
+	return nil, nil
 }
 
 func runFakeRender(addr string) {
-	var render fakeRender
-	s := &http.Server{
-		Addr:           addr,
-		Handler:        &render,
-		ReadTimeout:    10 * time.Second,
-		WriteTimeout:   10 * time.Second,
-		MaxHeaderBytes: 1 << 20,
+	var tTS fakeRender
+	processor := gopnikrpc.NewRenderProcessor(&tTS)
+
+	transport, err := thrift.NewTServerSocket(addr)
+	if err != nil {
+		panic(err)
 	}
-	s.ListenAndServe()
+	transportFactory := thrift.NewTFramedTransportFactory(thrift.NewTTransportFactory())
+	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
+
+	server := thrift.NewTSimpleServer4(processor, transport, transportFactory, protocolFactory)
+
+	go server.Serve()
 }
 
-func (s *RenderSelectorSuite) TestRoute(c *C) {
+func TestRoute(t *testing.T) {
 	renders := []string{"localhost:9001", "localhost:9002", "localhost:9003"}
 
 	for _, r := range renders {
@@ -50,7 +50,7 @@ func (s *RenderSelectorSuite) TestRoute(c *C) {
 	time.Sleep(time.Millisecond)
 
 	rs, err := NewRenderSelector(renders, time.Second, 30*time.Second)
-	c.Assert(err, IsNil)
+	require.Nil(t, err)
 	defer rs.Stop()
 
 	coord := gopnik.TileCoord{
@@ -67,7 +67,7 @@ func (s *RenderSelectorSuite) TestRoute(c *C) {
 	coord.Zoom = 5
 	back4 := rs.SelectRender(coord)
 
-	c.Check(
+	require.True(t,
 		back1 != back2 || back1 != back3 || back1 != back4,
-		Equals, true)
+	)
 }

@@ -2,11 +2,12 @@ package tilerouter
 
 import (
 	"fmt"
+	"gopnikrpc"
 	"hash/adler32"
-	"io/ioutil"
-	"net/http"
 	"sync"
 	"time"
+
+	"git.apache.org/thrift.git/lib/go/thrift"
 
 	"gopnik"
 	"servicestatus"
@@ -112,27 +113,26 @@ func (rs *RenderSelector) updateServiceStatus() {
 	servicestatus.SetFAIL()
 }
 
-func (rs *RenderSelector) ping(i int) int {
-	transport := http.Transport{
-		ResponseHeaderTimeout: rs.timeout,
-	}
+func (self *RenderSelector) ping(i int) int {
+	addr := self.renders[i].Addr
 
-	client := http.Client{
-		Transport: &transport,
-	}
-
-	resp, err := client.Get(fmt.Sprintf("http://%v/status", rs.renders[i].Addr))
+	transportFactory := thrift.NewTFramedTransportFactory(thrift.NewTTransportFactory())
+	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
+	socket, err := thrift.NewTSocketTimeout(addr, self.timeout)
 	if err != nil {
 		return Offline
 	}
-	if resp.StatusCode != http.StatusOK {
-		return Offline
-	}
-	data, err := ioutil.ReadAll(resp.Body)
+	transport := transportFactory.GetTransport(socket)
+	defer transport.Close()
+	err = transport.Open()
 	if err != nil {
 		return Offline
 	}
-	if len(data) < 2 || data[0] != 'O' || data[1] != 'k' {
+
+	renderClient := gopnikrpc.NewRenderClientFactory(transport, protocolFactory)
+	status, err := renderClient.Status()
+
+	if err != nil || !status {
 		return Offline
 	}
 

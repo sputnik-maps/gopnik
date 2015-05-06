@@ -1,7 +1,6 @@
 package main
 
 import (
-	"net/http"
 	"os"
 	"os/signal"
 	"plugins"
@@ -21,13 +20,11 @@ import (
 var log = logging.MustGetLogger("global")
 
 type RenderConfig struct {
-	Threads          int             // Use >= n threads
-	Addr             string          // Bind addr
-	DebugAddr        string          // Address for statistics
-	HTTPReadTimeout  string          //
-	HTTPWriteTimeout string          //
-	HotCacheDelay    string          // Time period after cache set is done and before drop hot cache
-	Logging          json.RawMessage // see loghelper.go
+	Threads       int             // Use >= n threads
+	Addr          string          // Bind addr
+	DebugAddr     string          // Address for statistics
+	HotCacheDelay string          // Time period after cache set is done and before drop hot cache
+	Logging       json.RawMessage // see loghelper.go
 }
 
 type Config struct {
@@ -55,12 +52,10 @@ func sigHandler(sig os.Signal, actionFunc func() error, errMsg string) {
 func main() {
 	cfg := Config{
 		Render: RenderConfig{
-			Threads:          1,
-			Addr:             ":8090",
-			DebugAddr:        ":9090",
-			HTTPReadTimeout:  "60s",
-			HTTPWriteTimeout: "60s",
-			HotCacheDelay:    "0s",
+			Threads:       1,
+			Addr:          ":8090",
+			DebugAddr:     ":9090",
+			HotCacheDelay: "0s",
 		},
 		CommonConfig: app.CommonConfig{
 			MetaSize: 8,
@@ -90,14 +85,6 @@ func main() {
 		log.Fatalf("Failed to create tile server: %v", err)
 	}
 
-	readTimeout, err := time.ParseDuration(cfg.Render.HTTPReadTimeout)
-	if err != nil {
-		log.Fatalf("Invalid read timeout: %v", err)
-	}
-	writeTimeout, err := time.ParseDuration(cfg.Render.HTTPWriteTimeout)
-	if err != nil {
-		log.Fatalf("Invalid write timeout: %v", err)
-	}
 	δ := time.Since(τ0)
 	log.Info("Done in %v seconds", δ.Seconds())
 
@@ -107,13 +94,6 @@ func main() {
 
 	servicestatus.SetOK() // Service is Ok if renders starts
 
-	s := &http.Server{
-		Addr:           cfg.Render.Addr,
-		Handler:        ts,
-		ReadTimeout:    readTimeout,
-		WriteTimeout:   writeTimeout,
-		MaxHeaderBytes: 1 << 20,
-	}
 	log.Info("Starting on %s...", cfg.Render.Addr)
-	log.Fatal(s.ListenAndServe())
+	log.Fatal(tileserver.RunServer(cfg.Render.Addr, ts))
 }
