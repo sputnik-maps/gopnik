@@ -1,4 +1,4 @@
-package xmlstatus
+package app
 
 import (
 	"encoding/xml"
@@ -9,15 +9,11 @@ import (
 	"sync"
 
 	"github.com/go-martini/martini"
-	"github.com/op/go-logging"
 	"github.com/orofarne/hmetrics2"
-	json "github.com/orofarne/strict-json"
 
 	"program_version"
 	"servicestatus"
 )
-
-var log = logging.MustGetLogger("global")
 
 type xmlstatusLogger struct {
 }
@@ -27,7 +23,7 @@ func (self *xmlstatusLogger) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
-func CreateXMLStatusHandler(appConfig interface{}) http.Handler {
+func CreateXMLStatusHandler() http.Handler {
 	m := martini.Classic()
 
 	var mu sync.Mutex
@@ -55,11 +51,8 @@ func CreateXMLStatusHandler(appConfig interface{}) http.Handler {
 	})
 
 	m.Get("/config", func(w http.ResponseWriter) {
-		enc := json.NewEncoder(w)
-		err := enc.Encode(appConfig)
-		if err != nil {
-			log.Error("[xmlstatus] Error: error encoding json: %v", err)
-		}
+		w.Header().Add("Content-type", "application/json")
+		w.Write([]byte(App.Config()))
 	})
 
 	m.Get("/stat", func(w http.ResponseWriter) {

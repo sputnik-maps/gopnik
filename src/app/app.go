@@ -17,7 +17,6 @@ import (
 	"loghelper"
 	"plugins"
 	"program_version"
-	"xmlstatus"
 
 	"github.com/op/go-logging"
 	"github.com/orofarne/hmetrics2"
@@ -81,6 +80,14 @@ func (self *app) Configure(appName string, defaultCofig interface{}) {
 
 func (self *app) Metatiler() *gopnik.Metatiler {
 	return self.metatiler
+}
+
+func (self *app) Config() string {
+	buf, err := json.MarshalIndent(self.config, "", "  ")
+	if err != nil {
+		panic(err)
+	}
+	return string(buf)
 }
 
 // Private methods
@@ -258,7 +265,7 @@ func (self *app) startMonitoring(addr string) error {
 	go func() {
 		log.Info("Serving debug data (/debug/vars) on %s...", addr)
 		log.Info("Serving monitoring xml data on %s...", addr)
-		http.Handle("/", xmlstatus.CreateXMLStatusHandler(self.config))
+		http.Handle("/", CreateXMLStatusHandler())
 		log.Fatal(http.ListenAndServe(addr, nil))
 	}()
 	// Hmetrics2

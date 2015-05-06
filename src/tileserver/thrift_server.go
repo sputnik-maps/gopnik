@@ -6,9 +6,11 @@ import (
 	"gopnikrpc"
 	"gopnikrpc/types"
 	"gopnikrpcutils"
+	"rpcbaseservice"
 )
 
 type thriftTileServer struct {
+	*rpcbaseservice.Service
 	tileServer *TileServer
 }
 
@@ -23,16 +25,10 @@ func (self *thriftTileServer) Render(coord *types.Coord, prio gopnikrpc.Priority
 	return gopnikrpcutils.TileToRPC(tile), nil
 }
 
-func (self *thriftTileServer) Status() (r bool, err error)    { return true, nil }
-func (self *thriftTileServer) Version() (r string, err error) { return "?", nil }
-func (self *thriftTileServer) Config() (r string, err error)  { return "?", nil }
-func (self *thriftTileServer) Stat() (r map[string]float64, err error) {
-	return map[string]float64{}, nil
-}
-
 func RunServer(addr string, tileServer *TileServer) error {
 	tTS := &thriftTileServer{
 		tileServer: tileServer,
+		Service:    rpcbaseservice.NewService(),
 	}
 	processor := gopnikrpc.NewRenderProcessor(tTS)
 
