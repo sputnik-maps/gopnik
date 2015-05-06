@@ -4,18 +4,18 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"plugins"
-	_ "plugins_enabled"
-	"servicestatus"
 	"syscall"
-	"tileserver"
 	"time"
-
-	"app"
-	"gopnik"
 
 	"github.com/op/go-logging"
 	json "github.com/orofarne/strict-json"
+
+	"app"
+	"gopnik"
+	"plugins"
+	_ "plugins_enabled"
+	"servicestatus"
+	"tileserver"
 )
 
 var log = logging.MustGetLogger("global")
