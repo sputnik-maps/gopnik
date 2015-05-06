@@ -2,10 +2,6 @@ package tileserver
 
 import (
 	"container/list"
-	"net/http"
-	"regexp"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -20,9 +16,8 @@ import (
 var log = logging.MustGetLogger("global")
 
 var hReqT = hmetrics2.MustRegisterPackageMetric("request_time", hmetrics2.NewHistogram()).(*hmetrics2.Histogram)
-var hReq200 = hmetrics2.MustRegisterPackageMetric("code_200", hmetrics2.NewCounter()).(*hmetrics2.Counter)
-var hReq400 = hmetrics2.MustRegisterPackageMetric("code_400", hmetrics2.NewCounter()).(*hmetrics2.Counter)
-var hReq500 = hmetrics2.MustRegisterPackageMetric("code_500", hmetrics2.NewCounter()).(*hmetrics2.Counter)
+var hReqOk = hmetrics2.MustRegisterPackageMetric("request_ok", hmetrics2.NewCounter()).(*hmetrics2.Counter)
+var hReqErr = hmetrics2.MustRegisterPackageMetric("request_err", hmetrics2.NewCounter()).(*hmetrics2.Counter)
 
 type TileServer struct {
 	renders     *tilerender.MultiRenderPool
@@ -37,69 +32,67 @@ type saveQueueElem struct {
 	Data []gopnik.Tile
 }
 
-var pathRegex = regexp.MustCompile(`/([0-9]+)/([0-9]+)/([0-9]+)\.png`)
-
 func NewTileServer(poolsCfg app.RenderPoolsConfig, cp gopnik.CachePluginInterface, removeDelay time.Duration) (*TileServer, error) {
-	srv := &TileServer{
+	self := &TileServer{
 		cache:       cp,
 		saveList:    list.New(),
 		removeDelay: removeDelay,
 	}
 
 	var err error
-	srv.renders, err = tilerender.NewMultiRenderPool(poolsCfg)
+	self.renders, err = tilerender.NewMultiRenderPool(poolsCfg)
 
-	return srv, err
+	return self, err
 }
 
-func (srv *TileServer) cacheMetatile(tc gopnik.TileCoord, tiles []gopnik.Tile) {
-	listElem := srv.saveQueuePut(tc, tiles)
+func (self *TileServer) cacheMetatile(tc *gopnik.TileCoord, tiles []gopnik.Tile) {
+	listElem := self.saveQueuePut(tc, tiles)
 	defer func() {
-		time.Sleep(srv.removeDelay)
-		srv.saveQueueRemove(listElem)
+		time.Sleep(self.removeDelay)
+		self.saveQueueRemove(listElem)
 	}()
 
-	err := srv.cache.Set(tc, tiles)
+	err := self.cache.Set(*tc, tiles)
 	if err != nil {
 		log.Error("Cache write error: %v", err)
 	}
 }
 
-func (srv *TileServer) saveQueuePut(coord gopnik.TileCoord, tiles []gopnik.Tile) *list.Element {
-	srv.saveListMu.Lock()
-	defer srv.saveListMu.Unlock()
+func (self *TileServer) saveQueuePut(coord *gopnik.TileCoord, tiles []gopnik.Tile) *list.Element {
+	self.saveListMu.Lock()
+	defer self.saveListMu.Unlock()
 
 	elem := saveQueueElem{
-		TileCoord: coord,
+		TileCoord: *coord,
 		Data:      tiles,
 	}
-	return srv.saveList.PushFront(&elem)
+	return self.saveList.PushFront(&elem)
 }
 
-func (srv *TileServer) saveQueueRemove(elem *list.Element) {
-	srv.saveListMu.Lock()
-	defer srv.saveListMu.Unlock()
+func (self *TileServer) saveQueueRemove(elem *list.Element) {
+	self.saveListMu.Lock()
+	defer self.saveListMu.Unlock()
 
-	srv.saveList.Remove(elem)
+	self.saveList.Remove(elem)
 }
 
-func (srv *TileServer) saveQueueGet(coord gopnik.TileCoord) []gopnik.Tile {
-	srv.saveListMu.RLock()
-	defer srv.saveListMu.RUnlock()
+func (self *TileServer) saveQueueGet(coord *gopnik.TileCoord) []gopnik.Tile {
+	self.saveListMu.RLock()
+	defer self.saveListMu.RUnlock()
 
-	for e := srv.saveList.Front(); e != nil; e = e.Next() {
+	for e := self.saveList.Front(); e != nil; e = e.Next() {
 		elem := e.Value.(*saveQueueElem)
-		if elem.Equals(&coord) {
+		if elem.Equals(coord) {
 			return elem.Data
 		}
 	}
 	return nil
 }
 
-func (srv *TileServer) checkSaveQueue(coord gopnik.TileCoord) *gopnik.Tile {
-	metacoord := app.App.Metatiler().TileToMetatile(&coord)
+func (self *TileServer) checkSaveQueue(coord *gopnik.TileCoord) *gopnik.Tile {
+	metacoord := app.App.Metatiler().TileToMetatile(coord)
 
-	data := srv.saveQueueGet(metacoord)
+	data := self.saveQueueGet(&metacoord)
 	if data == nil {
 		return nil
 	}
@@ -108,16 +101,32 @@ func (srv *TileServer) checkSaveQueue(coord gopnik.TileCoord) *gopnik.Tile {
 	return &data[index]
 }
 
-func (srv *TileServer) ServeTileRequest(tc gopnik.TileCoord) (tile *gopnik.Tile, err error) {
-	if tile = srv.checkSaveQueue(tc); tile != nil {
+func (self *TileServer) ServeTileRequest(tc *gopnik.TileCoord) (tile *gopnik.Tile, err error) {
+	τ0 := time.Now()
+
+	tile, err = self.serveTileRequest(tc)
+
+	// Statistics
+	hReqT.AddPoint(time.Since(τ0).Seconds())
+	if err == nil {
+		hReqOk.Inc()
+	} else {
+		hReqErr.Inc()
+	}
+
+	return
+}
+
+func (self *TileServer) serveTileRequest(tc *gopnik.TileCoord) (tile *gopnik.Tile, err error) {
+	if tile = self.checkSaveQueue(tc); tile != nil {
 		return
 	}
 
-	metacoord := app.App.Metatiler().TileToMetatile(&tc)
+	metacoord := app.App.Metatiler().TileToMetatile(tc)
 
 	ansCh := make(chan *tilerender.RenderPoolResponse)
 
-	if err = srv.renders.EnqueueRequest(metacoord, ansCh); err != nil {
+	if err = self.renders.EnqueueRequest(metacoord, ansCh); err != nil {
 		return
 	}
 
@@ -126,74 +135,13 @@ func (srv *TileServer) ServeTileRequest(tc gopnik.TileCoord) (tile *gopnik.Tile,
 		return nil, ans.Error
 	}
 
-	go srv.cacheMetatile(metacoord, ans.Tiles)
+	go self.cacheMetatile(&metacoord, ans.Tiles)
 	index := (tc.Y-metacoord.Y)*metacoord.Size + (tc.X - metacoord.X)
 
 	return &ans.Tiles[index], nil
 }
 
-func (srv *TileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	τ0 := time.Now()
-	defer hReqT.AddPoint(time.Since(τ0).Seconds())
-
-	var err error
-	log.Info("New request: %v", r.URL.String())
-
-	if strings.HasSuffix(r.URL.String(), "/status") {
-		w.Write([]byte{'O', 'k'})
-		return
-	}
-
-	path := pathRegex.FindStringSubmatch(r.URL.Path)
-	tags := r.URL.Query()["tag"]
-
-	if path == nil {
-		log.Debug("nil path: %v", r.Header)
-		http.Error(w, "nil path", 400)
-		hReq400.Inc()
-		return
-	}
-
-	z, _ := strconv.ParseUint(path[1], 10, 64)
-	x, _ := strconv.ParseUint(path[2], 10, 64)
-	y, _ := strconv.ParseUint(path[3], 10, 64)
-
-	size := uint64(1)
-	if sizeQuery, found := r.URL.Query()["size"]; found && len(sizeQuery) > 0 {
-		size, err = strconv.ParseUint(sizeQuery[0], 10, 0)
-		if err != nil {
-			log.Debug("Invalid size: %v", err)
-			http.Error(w, err.Error(), 400)
-			hReq400.Inc()
-			return
-		}
-	}
-
-	coord := gopnik.TileCoord{
-		X:    x,
-		Y:    y,
-		Zoom: z,
-		Size: size,
-		Tags: tags,
-	}
-
-	tile, err := srv.ServeTileRequest(coord)
-
-	if err != nil {
-		log.Error("Render error: %v", err)
-		http.Error(w, err.Error(), 500)
-		hReq500.Inc()
-		return
-	}
-
-	w.Header().Set("Content-Type", "image/png")
-	_, err = w.Write(tile.Image)
-	if err != nil {
-		log.Warning("HTTP Write error: %v", err)
-	}
-}
-
-func (srv *TileServer) ReloadStyle() error {
-	srv.renders.Reload()
+func (self *TileServer) ReloadStyle() error {
+	self.renders.Reload()
 	return nil
 }

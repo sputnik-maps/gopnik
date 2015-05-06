@@ -2,13 +2,14 @@ package tilerouter
 
 import (
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"net/url"
 	"sync"
 	"time"
 
+	"git.apache.org/thrift.git/lib/go/thrift"
+
 	"gopnik"
+	"gopnikrpc"
+	"gopnikrpcutils"
 )
 
 var ATTEMPTS = 2
@@ -16,75 +17,68 @@ var ATTEMPTS = 2
 type TileRouter struct {
 	timeout     time.Duration
 	pingPeriod  time.Duration
-	client      http.Client
 	rendersLock sync.RWMutex
 	selector    *RenderSelector
 }
 
 func NewTileRouter(renders []string, timeout time.Duration, pingPeriod time.Duration) (*TileRouter, error) {
-	tr := &TileRouter{
-		timeout:    timeout,
-		pingPeriod: pingPeriod,
-		client: http.Client{
-			Transport: &http.Transport{
-				ResponseHeaderTimeout: timeout,
-			},
-		},
+	self := &TileRouter{
+		timeout:     timeout,
+		pingPeriod:  pingPeriod,
 		rendersLock: sync.RWMutex{},
 	}
 
-	tr.UpdateRenders(renders)
+	self.UpdateRenders(renders)
 
-	return tr, nil
+	return self, nil
 }
 
-func (tr *TileRouter) UpdateRenders(renders []string) {
-	selector, err := NewRenderSelector(renders, tr.pingPeriod, tr.timeout)
+func (self *TileRouter) UpdateRenders(renders []string) {
+	selector, err := NewRenderSelector(renders, self.pingPeriod, self.timeout)
 	if err != nil {
 		log.Error("Failed to recreate RenderSelector: %v", err)
 	}
 
-	tr.rendersLock.Lock()
-	defer tr.rendersLock.Unlock()
-	if tr.selector != nil {
-		tr.selector.Stop()
+	self.rendersLock.Lock()
+	defer self.rendersLock.Unlock()
+	if self.selector != nil {
+		self.selector.Stop()
 	}
-	tr.selector = selector
+	self.selector = selector
 }
 
-func (tr *TileRouter) Tile(coord gopnik.TileCoord) (img []byte, err error) {
+func (self *TileRouter) getTile(addr string, coord gopnik.TileCoord) (img []byte, err error) {
+	transportFactory := thrift.NewTFramedTransportFactory(thrift.NewTTransportFactory())
+	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
+	socket, err := thrift.NewTSocketTimeout(addr, self.timeout)
+	if err != nil {
+		return nil, fmt.Errorf("socket error: %v", err.Error())
+	}
+	transport := transportFactory.GetTransport(socket)
+	defer transport.Close()
+	err = transport.Open()
+	if err != nil {
+		return nil, fmt.Errorf("transport open error: %v", err.Error())
+	}
+
+	renderClient := gopnikrpc.NewRenderClientFactory(transport, protocolFactory)
+	tile, err := renderClient.Render(gopnikrpcutils.CoordToRPC(&coord), gopnikrpc.Priority_HIGH, false)
+
+	return tile.Image, err
+}
+
+func (self *TileRouter) Tile(coord gopnik.TileCoord) (img []byte, err error) {
 	for i := 0; i < ATTEMPTS; i++ {
-		addr := tr.selector.SelectRender(coord)
+		addr := self.selector.SelectRender(coord)
 		if addr == "" {
 			img, err = nil, fmt.Errorf("No available renders")
 			time.Sleep(10 * time.Second)
 			continue
 		}
-		renderUrl := fmt.Sprintf("http://%s/%v/%v/%v.png",
-			addr, coord.Zoom, coord.X, coord.Y)
-		for i, tag := range coord.Tags {
-			if i == 0 {
-				renderUrl += "?"
-			} else {
-				renderUrl += "&"
-			}
-			renderUrl += "tag="
-			renderUrl += url.QueryEscape(tag)
+		img, err = self.getTile(addr, coord)
+		if err == nil {
+			return
 		}
-		resp, er := tr.client.Get(renderUrl)
-		if er != nil {
-			tr.selector.SetStatus(addr, Offline)
-			img, err = nil, fmt.Errorf("HTTP GET error: %v", er)
-			continue
-		}
-		defer resp.Body.Close()
-		img, err = ioutil.ReadAll(resp.Body)
-		if err != nil {
-			tr.selector.SetStatus(addr, Offline)
-			img, err = nil, fmt.Errorf("HTTP read error: %v", err)
-			continue
-		}
-		return
 	}
 
 	return
