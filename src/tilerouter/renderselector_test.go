@@ -38,7 +38,9 @@ func runFakeRender(addr string) {
 
 	server := thrift.NewTSimpleServer4(processor, transport, transportFactory, protocolFactory)
 
-	go server.Serve()
+	if err = server.Serve(); err != nil {
+		panic(err)
+	}
 }
 
 func TestRoute(t *testing.T) {
