@@ -10,6 +10,7 @@ import (
 	"app"
 	"gopnik"
 	"gopnikprerenderlib"
+	"gopnikrpc"
 	"perflog"
 	"tilerender"
 )
@@ -41,16 +42,16 @@ func sArrEq(a []string, b []string) bool {
 func newLoop(cache gopnik.CachePluginInterface, renderCfg app.RenderPoolsConfig, saverPoolSize int) (*loop, error) {
 	l := new(loop)
 
-	qSize := uint(0)
-	for _, rCfg := range renderCfg.RenderPools {
-		qSize += rCfg.PoolSize
-	}
-	qSize *= 100
-	for _, rCfg := range renderCfg.RenderPools {
-		if rCfg.QueueSize < qSize {
-			qSize = rCfg.QueueSize
-		}
-	}
+	qSize := uint(100)
+	// for _, rCfg := range renderCfg.RenderPools {
+	// 	qSize += rCfg.PoolSize
+	// }
+	// qSize *= 100
+	// for _, rCfg := range renderCfg.RenderPools {
+	// 	if rCfg.QueueSize < qSize {
+	// 		qSize = rCfg.QueueSize
+	// 	}
+	// }
 
 	l.tiles = make(chan *tilerender.RenderPoolResponse)
 	l.saverQueue = make(chan *tilerender.RenderPoolResponse, qSize)
@@ -262,7 +263,7 @@ func (l *loop) Run(conn net.Conn) {
 }
 
 func (l *loop) enqueueRequest(coord gopnik.TileCoord, resCh chan<- *tilerender.RenderPoolResponse) error {
-	return l.renders.EnqueueRequest(coord, resCh)
+	return l.renders.EnqueueRequest(coord, resCh, gopnikrpc.Priority_LOW)
 }
 
 func (l *loop) Kill() {

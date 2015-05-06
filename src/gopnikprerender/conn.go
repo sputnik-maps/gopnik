@@ -86,17 +86,17 @@ func (self *slaveConn) Connect(addr string) error {
 	self.saversPool = resp.Hello.SaverPool
 	self.RenderPools = resp.Hello.RenderPools
 	// Detect slave queue size
-	qSize := uint(0)
-	for _, rCfg := range self.RenderPools {
-		qSize += rCfg.PoolSize
-	}
-	qSize *= 100
-	for _, rCfg := range self.RenderPools {
-		if rCfg.QueueSize < qSize {
-			qSize = rCfg.QueueSize
-		}
-	}
-	qSize += 2
+	qSize := uint(100)
+	// for _, rCfg := range self.RenderPools {
+	// 	qSize += rCfg.PoolSize
+	// }
+	// qSize *= 100
+	// for _, rCfg := range self.RenderPools {
+	// 	if rCfg.QueueSize < qSize {
+	// 		qSize = rCfg.QueueSize
+	// 	}
+	// }
+	// qSize += 2
 	self.cfgLock.Unlock()
 
 	self.writeQ = make(chan interface{}, qSize)

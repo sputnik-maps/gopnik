@@ -11,20 +11,23 @@ import (
 
 var hRenderTime = hmetrics2.MustRegisterPackageMetric("render_time", hmetrics2.NewHistogram()).(*hmetrics2.Histogram)
 var hWaitTime = hmetrics2.MustRegisterPackageMetric("wait_time", hmetrics2.NewHistogram()).(*hmetrics2.Histogram)
-var hQueueElems = hmetrics2.MustRegisterPackageMetric("queue_elems", hmetrics2.NewHistogram()).(*hmetrics2.Histogram)
+var hhpQueueElems = hmetrics2.MustRegisterPackageMetric("hp_queue_elems", hmetrics2.NewHistogram()).(*hmetrics2.Histogram)
+var hlpQueueElems = hmetrics2.MustRegisterPackageMetric("lp_queue_elems", hmetrics2.NewHistogram()).(*hmetrics2.Histogram)
 
 type renderWrapper struct {
-	render *TileRender
-	tasks  *renderQueue
-	cmd    []string
-	ttl    uint
-	ttlMu  sync.Mutex
-	stop   chan int
+	render  *TileRender
+	hpTasks *renderQueue
+	lpTasks *renderQueue
+	cmd     []string
+	ttl     uint
+	ttlMu   sync.Mutex
+	stop    chan int
 }
 
-func newRenderWrapper(tasks *renderQueue, cmd []string, ttl uint) (*renderWrapper, error) {
+func newRenderWrapper(hpTasks, lpTasks *renderQueue, cmd []string, ttl uint) (*renderWrapper, error) {
 	self := new(renderWrapper)
-	self.tasks = tasks
+	self.hpTasks = hpTasks
+	self.lpTasks = lpTasks
 	self.cmd = cmd
 	self.ttl = ttl
 	self.stop = make(chan int)
@@ -41,6 +44,7 @@ func newRenderWrapper(tasks *renderQueue, cmd []string, ttl uint) (*renderWrappe
 }
 
 func (self *renderWrapper) Run() {
+	// FIXME
 	go self.worker()
 }
 
@@ -117,7 +121,9 @@ func (self *renderWrapper) startRender() {
 
 func (self *renderWrapper) worker() {
 	var stopFlag int
-	tasks := self.tasks.TasksChan()
+	hpTasks := self.hpTasks.TasksChan()
+	lpTasks := self.lpTasks.TasksChan()
+	var tasks *renderQueue
 
 	self.ttlMu.Lock()
 	ttl := self.ttl
@@ -127,37 +133,46 @@ func (self *renderWrapper) worker() {
 
 L:
 	for {
+		var task gopnik.TileCoord
+		var ok bool
+
 		select {
 		case stopFlag = <-self.stop:
-			// stop signal recieved
 			break L
-		case task, ok := <-tasks:
+		case task, ok = <-hpTasks:
 			if !ok {
-				// chan is closed
 				break L
 			}
-			// Calculate statistics
-			waitTime := time.Since(waitTimeBefore)
-			hQueueElems.AddPoint(float64(len(tasks)))
-			// Process task
-			resp := self.renderOne(task)
-			// Attach wait time to response
-			resp.WaitTime = waitTime
-			// Copy to global statistics
-			hWaitTime.AddPoint(waitTime.Seconds())
-			// Reset WaitTime timer
-			waitTimeBefore = time.Now()
-			// Cleanup wait queue
-			if err := self.tasks.Done(task, resp); err != nil {
-				log.Error("RenderPoolQueue: %v", err)
+			tasks = self.hpTasks
+		case task, ok = <-lpTasks:
+			if !ok {
+				break L
 			}
-			// Check TTL
-			if ttl > 0 {
-				ttl--
-				if ttl == 0 {
-					stopFlag = 2
-					break L
-				}
+			tasks = self.lpTasks
+		}
+
+		// Calculate statistics
+		waitTime := time.Since(waitTimeBefore)
+		hhpQueueElems.AddPoint(float64(self.hpTasks.Size()))
+		hlpQueueElems.AddPoint(float64(self.lpTasks.Size()))
+		// Process task
+		resp := self.renderOne(task)
+		// Attach wait time to response
+		resp.WaitTime = waitTime
+		// Copy to global statistics
+		hWaitTime.AddPoint(waitTime.Seconds())
+		// Reset WaitTime timer
+		waitTimeBefore = time.Now()
+		// Cleanup wait queue
+		if err := tasks.Done(task, resp); err != nil {
+			log.Error("RenderPoolQueue: %v", err)
+		}
+		// Check TTL
+		if ttl > 0 {
+			ttl--
+			if ttl == 0 {
+				stopFlag = 2
+				break L
 			}
 		}
 	}

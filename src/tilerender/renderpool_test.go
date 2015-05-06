@@ -4,14 +4,15 @@ import (
 	"fmt"
 	"testing"
 
-	"gopnik"
-	"sampledata"
-
 	"github.com/stretchr/testify/require"
+
+	"gopnik"
+	"gopnikrpc"
+	"sampledata"
 )
 
 func TestOneRender(t *testing.T) {
-	rpool, err := NewRenderPool(sampledata.SlaveCmd, 1, 1, 0)
+	rpool, err := NewRenderPool(sampledata.SlaveCmd, 1, 1, 1, 0)
 	require.Nil(t, err)
 
 	coord := gopnik.TileCoord{
@@ -21,7 +22,7 @@ func TestOneRender(t *testing.T) {
 		Size: 1,
 	}
 	ansCh := make(chan *RenderPoolResponse)
-	err = rpool.EnqueueRequest(coord, ansCh)
+	err = rpool.EnqueueRequest(coord, ansCh, gopnikrpc.Priority_HIGH)
 	require.Nil(t, err)
 	ans := <-ansCh
 	require.Nil(t, ans.Error)
@@ -29,10 +30,10 @@ func TestOneRender(t *testing.T) {
 	sampledata.CheckTile(t, ans.Tiles[0].Image, "1_0_0.png")
 }
 
-func Test5Renders(t *testing.T) {
+func Test5RendersHP(t *testing.T) {
 	const nTiles = 15
 
-	rpool, err := NewRenderPool(sampledata.SlaveCmd, 5, nTiles, 0)
+	rpool, err := NewRenderPool(sampledata.SlaveCmd, 5, nTiles, 0, 0)
 	require.Nil(t, err)
 
 	coord := gopnik.TileCoord{
@@ -43,7 +44,32 @@ func Test5Renders(t *testing.T) {
 	}
 	ansCh := make(chan *RenderPoolResponse)
 	for i := 0; i < nTiles; i++ {
-		err = rpool.EnqueueRequest(coord, ansCh)
+		err = rpool.EnqueueRequest(coord, ansCh, gopnikrpc.Priority_HIGH)
+		require.Nil(t, err)
+	}
+	for i := 0; i < nTiles; i++ {
+		ans := <-ansCh
+		require.Nil(t, ans.Error)
+		require.Equal(t, len(ans.Tiles), 1)
+		sampledata.CheckTile(t, ans.Tiles[0].Image, "1_0_0.png")
+	}
+}
+
+func Test5RendersLP(t *testing.T) {
+	const nTiles = 15
+
+	rpool, err := NewRenderPool(sampledata.SlaveCmd, 5, 0, nTiles, 0)
+	require.Nil(t, err)
+
+	coord := gopnik.TileCoord{
+		X:    0,
+		Y:    0,
+		Zoom: 1,
+		Size: 1,
+	}
+	ansCh := make(chan *RenderPoolResponse)
+	for i := 0; i < nTiles; i++ {
+		err = rpool.EnqueueRequest(coord, ansCh, gopnikrpc.Priority_LOW)
 		require.Nil(t, err)
 	}
 	for i := 0; i < nTiles; i++ {
@@ -55,7 +81,7 @@ func Test5Renders(t *testing.T) {
 }
 
 func TestTTL(t *testing.T) {
-	rpool, err := NewRenderPool(sampledata.SlaveCmd, 1, 4, 2)
+	rpool, err := NewRenderPool(sampledata.SlaveCmd, 1, 4, 0, 2)
 	require.Nil(t, err)
 
 	ansCh := make(chan *RenderPoolResponse)
@@ -67,7 +93,7 @@ func TestTTL(t *testing.T) {
 				Zoom: 1,
 				Size: 1,
 			}
-			err = rpool.EnqueueRequest(coord, ansCh)
+			err = rpool.EnqueueRequest(coord, ansCh, gopnikrpc.Priority_HIGH)
 			require.Nil(t, err)
 		}
 	}
@@ -79,7 +105,7 @@ func TestTTL(t *testing.T) {
 }
 
 func TestOneRender4Tiles(t *testing.T) {
-	rpool, err := NewRenderPool(sampledata.SlaveCmd, 1, 1, 0)
+	rpool, err := NewRenderPool(sampledata.SlaveCmd, 1, 1, 0, 0)
 	require.Nil(t, err)
 
 	coord := gopnik.TileCoord{
@@ -89,7 +115,7 @@ func TestOneRender4Tiles(t *testing.T) {
 		Size: 2,
 	}
 	ansCh := make(chan *RenderPoolResponse)
-	err = rpool.EnqueueRequest(coord, ansCh)
+	err = rpool.EnqueueRequest(coord, ansCh, gopnikrpc.Priority_HIGH)
 	require.Nil(t, err)
 	ans := <-ansCh
 	require.Nil(t, ans.Error)
@@ -103,7 +129,7 @@ func TestOneRender4Tiles(t *testing.T) {
 }
 
 func Benchmark5Renders(b *testing.B) {
-	rpool, err := NewRenderPool(sampledata.SlaveCmd, 5, uint(b.N), 0)
+	rpool, err := NewRenderPool(sampledata.SlaveCmd, 5, uint(b.N), 0, 0)
 	if err != nil {
 		b.Errorf("NewRenderPool error: %v", err)
 	}
@@ -115,7 +141,7 @@ func Benchmark5Renders(b *testing.B) {
 	}
 	ansCh := make(chan *RenderPoolResponse)
 	for i := 0; i < b.N; i++ {
-		err = rpool.EnqueueRequest(coord, ansCh)
+		err = rpool.EnqueueRequest(coord, ansCh, gopnikrpc.Priority_HIGH)
 		if err != nil {
 			b.Errorf("EnqueueRequest error: %v", err)
 		}

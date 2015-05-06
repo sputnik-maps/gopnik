@@ -35,12 +35,13 @@ func TestSimple(t *testing.T) {
 	renderPoolsConfig := app.RenderPoolsConfig{
 		[]app.RenderPoolConfig{
 			app.RenderPoolConfig{
-				Cmd:       sampledata.SlaveCmd, // Render slave binary
-				MinZoom:   0,
-				MaxZoom:   19,
-				PoolSize:  1,
-				QueueSize: 10,
-				RenderTTL: 0,
+				Cmd:         sampledata.SlaveCmd, // Render slave binary
+				MinZoom:     0,
+				MaxZoom:     19,
+				PoolSize:    1,
+				HPQueueSize: 10,
+				LPQueueSize: 10,
+				RenderTTL:   0,
 			},
 		},
 	}

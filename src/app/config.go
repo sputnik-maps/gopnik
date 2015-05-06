@@ -16,13 +16,14 @@ type PluginConfig struct {
 }
 
 type RenderPoolConfig struct {
-	Cmd       []string // Render slave binary
-	MinZoom   uint
-	MaxZoom   uint
-	Tags      []string
-	PoolSize  uint
-	QueueSize uint
-	RenderTTL uint
+	Cmd         []string // Render slave binary
+	MinZoom     uint
+	MaxZoom     uint
+	Tags        []string
+	PoolSize    uint
+	HPQueueSize uint
+	LPQueueSize uint
+	RenderTTL   uint
 }
 
 type RenderPoolsConfig struct {

@@ -7,6 +7,7 @@ import (
 	"github.com/op/go-logging"
 
 	"gopnik"
+	"gopnikrpc"
 )
 
 var log = logging.MustGetLogger("global")
@@ -20,16 +21,18 @@ type RenderPoolResponse struct {
 }
 
 type RenderPool struct {
-	tasks   *renderQueue
+	hpTasks *renderQueue
+	lpTasks *renderQueue
 	cmd     []string
 	ttl     uint
 	renders []*renderWrapper
 }
 
-func NewRenderPool(cmd []string, poolSize, queueSize, ttl uint) (*RenderPool, error) {
+func NewRenderPool(cmd []string, poolSize, hpQueueSize, lpQueueSize, ttl uint) (*RenderPool, error) {
 	self := &RenderPool{}
 	self.cmd = cmd
-	self.tasks = newRenderQueue(queueSize)
+	self.hpTasks = newRenderQueue(hpQueueSize)
+	self.lpTasks = newRenderQueue(lpQueueSize)
 	self.renders = make([]*renderWrapper, poolSize)
 	self.ttl = ttl
 
@@ -37,7 +40,7 @@ func NewRenderPool(cmd []string, poolSize, queueSize, ttl uint) (*RenderPool, er
 	for i, _ := range self.renders {
 		go func(k int) {
 			var err error
-			self.renders[k], err = newRenderWrapper(self.tasks, self.cmd, self.ttl)
+			self.renders[k], err = newRenderWrapper(self.hpTasks, self.lpTasks, self.cmd, self.ttl)
 			errCh <- err
 		}(i)
 	}
@@ -62,8 +65,15 @@ func NewRenderPool(cmd []string, poolSize, queueSize, ttl uint) (*RenderPool, er
 	return self, nil
 }
 
-func (self *RenderPool) EnqueueRequest(coord gopnik.TileCoord, resCh chan<- *RenderPoolResponse) error {
-	return self.tasks.Push(coord, resCh)
+func (self *RenderPool) EnqueueRequest(coord gopnik.TileCoord, resCh chan<- *RenderPoolResponse, prio gopnikrpc.Priority) error {
+	switch prio {
+	case gopnikrpc.Priority_HIGH:
+		return self.hpTasks.Push(coord, resCh)
+	case gopnikrpc.Priority_LOW:
+		return self.lpTasks.Push(coord, resCh)
+	default:
+		return fmt.Errorf("unknown priority: %v", prio)
+	}
 }
 
 func (self *RenderPool) Reload() {
@@ -81,7 +91,7 @@ func (self *RenderPool) Size() int {
 }
 
 func (self *RenderPool) QueueSize() int {
-	return self.tasks.Size()
+	return self.hpTasks.Size() + self.lpTasks.Size()
 }
 
 func (self *RenderPool) Cmd() []string {
@@ -98,7 +108,7 @@ func (self *RenderPool) Resize(newPoolSize int) {
 	}
 	for newPoolSize > len(self.renders) {
 		for {
-			render, err := newRenderWrapper(self.tasks, self.cmd, self.ttl)
+			render, err := newRenderWrapper(self.hpTasks, self.lpTasks, self.cmd, self.ttl)
 			if err != nil {
 				log.Error("Failed to create render: %v", err)
 			} else {

@@ -5,12 +5,13 @@ import (
 	"sync"
 	"time"
 
-	"app"
-	"gopnik"
-	"tilerender"
-
 	"github.com/op/go-logging"
 	"github.com/orofarne/hmetrics2"
+
+	"app"
+	"gopnik"
+	"gopnikrpc"
+	"tilerender"
 )
 
 var log = logging.MustGetLogger("global")
@@ -101,10 +102,10 @@ func (self *TileServer) checkSaveQueue(coord *gopnik.TileCoord) *gopnik.Tile {
 	return &data[index]
 }
 
-func (self *TileServer) ServeTileRequest(tc *gopnik.TileCoord) (tile *gopnik.Tile, err error) {
+func (self *TileServer) ServeTileRequest(tc *gopnik.TileCoord, prio gopnikrpc.Priority) (tile *gopnik.Tile, err error) {
 	τ0 := time.Now()
 
-	tile, err = self.serveTileRequest(tc)
+	tile, err = self.serveTileRequest(tc, prio)
 
 	// Statistics
 	hReqT.AddPoint(time.Since(τ0).Seconds())
@@ -117,7 +118,7 @@ func (self *TileServer) ServeTileRequest(tc *gopnik.TileCoord) (tile *gopnik.Til
 	return
 }
 
-func (self *TileServer) serveTileRequest(tc *gopnik.TileCoord) (tile *gopnik.Tile, err error) {
+func (self *TileServer) serveTileRequest(tc *gopnik.TileCoord, prio gopnikrpc.Priority) (tile *gopnik.Tile, err error) {
 	if tile = self.checkSaveQueue(tc); tile != nil {
 		return
 	}
@@ -126,7 +127,7 @@ func (self *TileServer) serveTileRequest(tc *gopnik.TileCoord) (tile *gopnik.Til
 
 	ansCh := make(chan *tilerender.RenderPoolResponse)
 
-	if err = self.renders.EnqueueRequest(metacoord, ansCh); err != nil {
+	if err = self.renders.EnqueueRequest(metacoord, ansCh, prio); err != nil {
 		return
 	}
 

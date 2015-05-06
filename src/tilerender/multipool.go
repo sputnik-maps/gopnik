@@ -6,6 +6,7 @@ import (
 
 	"app"
 	"gopnik"
+	"gopnikrpc"
 )
 
 type zoomRender struct {
@@ -49,7 +50,8 @@ func NewMultiRenderPool(poolsCfg app.RenderPoolsConfig) (*MultiRenderPool, error
 		self.renders[i].Tags = poolsCfg.RenderPools[i].Tags
 		self.renders[i].Render, err = NewRenderPool(
 			poolsCfg.RenderPools[i].Cmd, poolsCfg.RenderPools[i].PoolSize,
-			poolsCfg.RenderPools[i].QueueSize, poolsCfg.RenderPools[i].RenderTTL)
+			poolsCfg.RenderPools[i].HPQueueSize, poolsCfg.RenderPools[i].LPQueueSize,
+			poolsCfg.RenderPools[i].RenderTTL)
 		if err != nil {
 			return nil, err
 		}
@@ -58,7 +60,7 @@ func NewMultiRenderPool(poolsCfg app.RenderPoolsConfig) (*MultiRenderPool, error
 	return self, nil
 }
 
-func (self *MultiRenderPool) EnqueueRequest(coord gopnik.TileCoord, resCh chan<- *RenderPoolResponse) error {
+func (self *MultiRenderPool) EnqueueRequest(coord gopnik.TileCoord, resCh chan<- *RenderPoolResponse, prio gopnikrpc.Priority) error {
 RL:
 	for _, renderCfg := range self.renders {
 		if renderCfg.Tags != nil {
@@ -75,7 +77,7 @@ RL:
 		if coord.Zoom < uint64(renderCfg.MinZoom) || coord.Zoom > uint64(renderCfg.MaxZoom) {
 			continue
 		}
-		return renderCfg.Render.EnqueueRequest(coord, resCh)
+		return renderCfg.Render.EnqueueRequest(coord, resCh, prio)
 	}
 	return NewBadCoordError(coord)
 }
