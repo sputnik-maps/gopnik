@@ -96,7 +96,7 @@ func (srv *TileServer) saveQueueGet(coord gopnik.TileCoord) []gopnik.Tile {
 	return nil
 }
 
-func (srv *TileServer) checkSaveQueue(coord gopnik.TileCoord) []byte {
+func (srv *TileServer) checkSaveQueue(coord gopnik.TileCoord) *gopnik.Tile {
 	metacoord := app.App.Metatiler().TileToMetatile(&coord)
 
 	data := srv.saveQueueGet(metacoord)
@@ -105,16 +105,11 @@ func (srv *TileServer) checkSaveQueue(coord gopnik.TileCoord) []byte {
 	}
 
 	index := (coord.Y-metacoord.Y)*metacoord.Size + (coord.X - metacoord.X)
-	return data[index].Image
+	return &data[index]
 }
 
-func (srv *TileServer) serveTileRequest(w http.ResponseWriter, r *http.Request, tc gopnik.TileCoord) {
-	if data := srv.checkSaveQueue(tc); data != nil {
-		w.Header().Set("Content-Type", "image/png")
-		_, err := w.Write(data)
-		if err != nil {
-			log.Warning("HTTP Write error: %v", err)
-		}
+func (srv *TileServer) ServeTileRequest(tc gopnik.TileCoord) (tile *gopnik.Tile, err error) {
+	if tile = srv.checkSaveQueue(tc); tile != nil {
 		return
 	}
 
@@ -122,37 +117,19 @@ func (srv *TileServer) serveTileRequest(w http.ResponseWriter, r *http.Request, 
 
 	ansCh := make(chan *tilerender.RenderPoolResponse)
 
-	err := srv.renders.EnqueueRequest(metacoord, ansCh)
-	if err != nil {
-		if tilerender.IsBadCoordError(err) {
-			log.Debug("%s", err.Error())
-			http.Error(w, err.Error(), 400)
-			hReq400.Inc()
-		} else {
-			log.Error("EnqueueRequest error: %v", err)
-			http.Error(w, err.Error(), 500)
-			hReq500.Inc()
-		}
+	if err = srv.renders.EnqueueRequest(metacoord, ansCh); err != nil {
 		return
 	}
 
 	ans := <-ansCh
 	if ans.Error != nil {
-		log.Error("Render error: %v", ans.Error)
-		http.Error(w, ans.Error.Error(), 500)
-		hReq500.Inc()
-		return
+		return nil, ans.Error
 	}
 
 	go srv.cacheMetatile(metacoord, ans.Tiles)
 	index := (tc.Y-metacoord.Y)*metacoord.Size + (tc.X - metacoord.X)
 
-	w.Header().Set("Content-Type", "image/png")
-	_, err = w.Write(ans.Tiles[index].Image)
-	if err != nil {
-		log.Warning("HTTP Write error: %v", err)
-	}
-	hReq200.Inc()
+	return &ans.Tiles[index], nil
 }
 
 func (srv *TileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -200,7 +177,20 @@ func (srv *TileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Tags: tags,
 	}
 
-	srv.serveTileRequest(w, r, coord)
+	tile, err := srv.ServeTileRequest(coord)
+
+	if err != nil {
+		log.Error("Render error: %v", err)
+		http.Error(w, err.Error(), 500)
+		hReq500.Inc()
+		return
+	}
+
+	w.Header().Set("Content-Type", "image/png")
+	_, err = w.Write(tile.Image)
+	if err != nil {
+		log.Warning("HTTP Write error: %v", err)
+	}
 }
 
 func (srv *TileServer) ReloadStyle() error {
