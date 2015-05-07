@@ -46,17 +46,23 @@ func NewTileServer(poolsCfg app.RenderPoolsConfig, cp gopnik.CachePluginInterfac
 	return self, err
 }
 
-func (self *TileServer) cacheMetatile(tc *gopnik.TileCoord, tiles []gopnik.Tile) {
+func (self *TileServer) cacheMetatile(tc *gopnik.TileCoord, tiles []gopnik.Tile) error {
 	listElem := self.saveQueuePut(tc, tiles)
+
 	defer func() {
-		time.Sleep(self.removeDelay)
-		self.saveQueueRemove(listElem)
+		go func() {
+			time.Sleep(self.removeDelay)
+			self.saveQueueRemove(listElem)
+		}()
 	}()
 
 	err := self.cache.Set(*tc, tiles)
+
 	if err != nil {
 		log.Error("Cache write error: %v", err)
 	}
+
+	return err
 }
 
 func (self *TileServer) saveQueuePut(coord *gopnik.TileCoord, tiles []gopnik.Tile) *list.Element {
@@ -102,10 +108,10 @@ func (self *TileServer) checkSaveQueue(coord *gopnik.TileCoord) *gopnik.Tile {
 	return &data[index]
 }
 
-func (self *TileServer) ServeTileRequest(tc *gopnik.TileCoord, prio gopnikrpc.Priority) (tile *gopnik.Tile, err error) {
+func (self *TileServer) ServeTileRequest(tc *gopnik.TileCoord, prio gopnikrpc.Priority, wait_storage bool) (tile *gopnik.Tile, err error) {
 	τ0 := time.Now()
 
-	tile, err = self.serveTileRequest(tc, prio)
+	tile, err = self.serveTileRequest(tc, prio, wait_storage)
 
 	// Statistics
 	hReqT.AddPoint(time.Since(τ0).Seconds())
@@ -118,7 +124,7 @@ func (self *TileServer) ServeTileRequest(tc *gopnik.TileCoord, prio gopnikrpc.Pr
 	return
 }
 
-func (self *TileServer) serveTileRequest(tc *gopnik.TileCoord, prio gopnikrpc.Priority) (tile *gopnik.Tile, err error) {
+func (self *TileServer) serveTileRequest(tc *gopnik.TileCoord, prio gopnikrpc.Priority, wait_storage bool) (tile *gopnik.Tile, err error) {
 	if tile = self.checkSaveQueue(tc); tile != nil {
 		return
 	}
@@ -136,10 +142,15 @@ func (self *TileServer) serveTileRequest(tc *gopnik.TileCoord, prio gopnikrpc.Pr
 		return nil, ans.Error
 	}
 
-	go self.cacheMetatile(&metacoord, ans.Tiles)
+	if wait_storage {
+		err = self.cacheMetatile(&metacoord, ans.Tiles)
+	} else {
+		go self.cacheMetatile(&metacoord, ans.Tiles)
+	}
+
 	index := (tc.Y-metacoord.Y)*metacoord.Size + (tc.X - metacoord.X)
 
-	return &ans.Tiles[index], nil
+	return &ans.Tiles[index], err
 }
 
 func (self *TileServer) ReloadStyle() error {

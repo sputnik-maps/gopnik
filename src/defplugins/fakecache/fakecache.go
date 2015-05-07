@@ -1,19 +1,22 @@
 package fakecache
 
 import (
+	"errors"
 	"time"
+
+	json "github.com/orofarne/strict-json"
 
 	"gopnik"
 	"plugins"
 	"sampledata"
-
-	json "github.com/orofarne/strict-json"
 )
 
 type fakeCachePluginConf struct {
 	UseStubImage bool
 	GetSleep     string
 	SetSleep     string
+	GetError     string
+	SetError     string
 }
 
 type FakeCachePlugin struct {
@@ -21,6 +24,8 @@ type FakeCachePlugin struct {
 	img      []byte
 	getSleep time.Duration
 	setSleep time.Duration
+	setError error
+	getError error
 }
 
 func (self *FakeCachePlugin) Configure(cfg json.RawMessage) error {
@@ -50,15 +55,27 @@ func (self *FakeCachePlugin) Configure(cfg json.RawMessage) error {
 		}
 	}
 
+	if self.config.SetError != "" {
+		self.setError = errors.New(self.config.SetError)
+	}
+	if self.config.GetError != "" {
+		self.getError = errors.New(self.config.GetError)
+	}
+
 	return nil
 }
 
 func (self *FakeCachePlugin) Get(gopnik.TileCoord) ([]byte, error) {
+	time.Sleep(self.getSleep)
+	if self.getError != nil {
+		return nil, self.getError
+	}
 	return self.img, nil
 }
 
 func (self *FakeCachePlugin) Set(gopnik.TileCoord, []gopnik.Tile) error {
-	return nil
+	time.Sleep(self.setSleep)
+	return self.setError
 }
 
 type FakeCachePluginFactory struct {

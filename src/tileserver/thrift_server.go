@@ -17,9 +17,9 @@ type thriftTileServer struct {
 func (self *thriftTileServer) Render(coord *types.Coord, prio gopnikrpc.Priority, wait_storage bool) (r *types.Tile, err error) {
 	tc := gopnikrpcutils.CoordFromRPC(coord)
 
-	tile, err := self.tileServer.ServeTileRequest(tc, prio)
+	tile, err := self.tileServer.ServeTileRequest(tc, prio, wait_storage)
 	if err != nil {
-		return nil, err
+		return nil, &gopnikrpc.RenderError{Message: err.Error()}
 	}
 
 	return gopnikrpcutils.TileToRPC(tile), nil
