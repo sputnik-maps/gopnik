@@ -19,7 +19,7 @@ func (self *thriftTileServer) Render(coord *types.Coord, prio gopnikrpc.Priority
 
 	tile, err := self.tileServer.ServeTileRequest(tc, prio, wait_storage)
 	if err != nil {
-		return nil, &gopnikrpc.RenderError{Message: err.Error()}
+		return nil, err
 	}
 
 	return gopnikrpcutils.TileToRPC(tile), nil

@@ -134,23 +134,26 @@ func (self *TileServer) serveTileRequest(tc *gopnik.TileCoord, prio gopnikrpc.Pr
 	ansCh := make(chan *tilerender.RenderPoolResponse)
 
 	if err = self.renders.EnqueueRequest(metacoord, ansCh, prio); err != nil {
-		return
+		return nil, &gopnikrpc.QueueLimitExceeded{}
 	}
 
 	ans := <-ansCh
 	if ans.Error != nil {
-		return nil, ans.Error
+		return nil, &gopnikrpc.RenderError{Message: ans.Error.Error()}
 	}
 
 	if wait_storage {
-		err = self.cacheMetatile(&metacoord, ans.Tiles)
+		err := self.cacheMetatile(&metacoord, ans.Tiles)
+		if err != nil {
+			return nil, &gopnikrpc.RenderError{Message: err.Error()}
+		}
 	} else {
 		go self.cacheMetatile(&metacoord, ans.Tiles)
 	}
 
 	index := (tc.Y-metacoord.Y)*metacoord.Size + (tc.X - metacoord.X)
 
-	return &ans.Tiles[index], err
+	return &ans.Tiles[index], nil
 }
 
 func (self *TileServer) ReloadStyle() error {
