@@ -79,7 +79,7 @@ func TestSimple(t *testing.T) {
 	}
 
 	renderClient := gopnikrpc.NewRenderClientFactory(transport, protocolFactory)
-	tiles, err := renderClient.Render(&types.Coord{
+	resp, err := renderClient.Render(&types.Coord{
 		Zoom: 1,
 		X:    0,
 		Y:    0,
@@ -88,10 +88,10 @@ func TestSimple(t *testing.T) {
 		gopnikrpc.Priority_HIGH, false)
 
 	require.Nil(t, err)
-	require.Equal(t, 1, len(tiles))
-	require.NotNil(t, tiles[0].Image)
+	require.Equal(t, 1, len(resp.Tiles))
+	require.NotNil(t, resp.Tiles[0].Image)
 
-	sampledata.CheckTile(t, tiles[0].Image, "1_0_0.png")
+	sampledata.CheckTile(t, resp.Tiles[0].Image, "1_0_0.png")
 }
 
 func TestErrorRaising(t *testing.T) {
@@ -218,7 +218,7 @@ func TestEmptyResult(t *testing.T) {
 	}
 
 	renderClient := gopnikrpc.NewRenderClientFactory(transport, protocolFactory)
-	tile, err := renderClient.Render(&types.Coord{
+	resp, err := renderClient.Render(&types.Coord{
 		Zoom: 1,
 		X:    0,
 		Y:    0,
@@ -227,7 +227,8 @@ func TestEmptyResult(t *testing.T) {
 		gopnikrpc.Priority_HIGH, true)
 
 	require.Nil(t, err)
-	require.Nil(t, tile)
+	require.NotNil(t, resp)
+	require.Equal(t, 0, len(resp.Tiles))
 
 	tile2, err2 := cp.Get(gopnik.TileCoord{
 		Zoom: 1,

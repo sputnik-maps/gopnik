@@ -62,16 +62,16 @@ func (self *TileRouter) getTile(addr string, coord gopnik.TileCoord) (img []byte
 	}
 
 	renderClient := gopnikrpc.NewRenderClientFactory(transport, protocolFactory)
-	tiles, err := renderClient.Render(gopnikrpcutils.CoordToRPC(&coord), gopnikrpc.Priority_HIGH, false)
+	resp, err := renderClient.Render(gopnikrpcutils.CoordToRPC(&coord), gopnikrpc.Priority_HIGH, false)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(tiles) != 1 {
-		return nil, fmt.Errorf("Invalid render response size %v", len(tiles))
+	if len(resp.Tiles) != 1 {
+		return nil, fmt.Errorf("Invalid render response size %v", len(resp.Tiles))
 	}
 
-	return tiles[0].Image, err
+	return resp.Tiles[0].Image, err
 }
 
 func (self *TileRouter) Tile(coord gopnik.TileCoord) (img []byte, err error) {

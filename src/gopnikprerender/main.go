@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"time"
 
 	"app"
 	"gopnik"
@@ -103,29 +102,14 @@ func main() {
 	*/
 
 	// Cli and log
-	stopBar := make(chan int)
-	go func() {
-		bar := pb.StartNew(coordsLen)
-		for res := range resChan {
-			if res.Type == gopnikprerenderlib.Error {
-				log.Error("[%v] Rendering error: %v", res.Addr, res.Error)
-			} else {
-				if res.Type == gopnikprerenderlib.Stat {
-					// Save stat
-					perflog.SavePerf(perflog.PerfLogEntry{
-						Coord:      *res.Coord,
-						Timestamp:  time.Now(),
-						RenderTime: res.Stat.RenderTime,
-						SaverTime:  res.Stat.SaveTime,
-					})
 
-					bar.Increment()
-				}
-			}
-		}
-		<-stopBar
-		bar.FinishPrint("Done")
-	}()
+	bar := pb.StartNew(coordsLen)
+	for res := range resChan {
+		perflog.SavePerf(res)
+		bar.Increment()
+	}
+
+	bar.FinishPrint("Done")
 
 	// Waiting...
 	coordinator.Wait()

@@ -1,6 +1,9 @@
 package tileserver
 
 import (
+	"gopnik"
+	"time"
+
 	"git.apache.org/thrift.git/lib/go/thrift"
 
 	"gopnikrpc"
@@ -14,16 +17,24 @@ type thriftTileServer struct {
 	tileServer *TileServer
 }
 
-func (self *thriftTileServer) Render(coord *types.Coord, prio gopnikrpc.Priority, wait_storage bool) (r []*types.Tile, err error) {
+func (self *thriftTileServer) Render(coord *types.Coord, prio gopnikrpc.Priority, wait_storage bool) (r *gopnikrpc.RenderResponse, err error) {
 	tc := gopnikrpcutils.CoordFromRPC(coord)
+	r = gopnikrpc.NewRenderResponse()
 
-	tiles, err := self.tileServer.ServeTileRequest(tc, prio, wait_storage)
+	var tiles []gopnik.Tile
+	var renderTime, saveTime time.Duration
+	tiles, renderTime, saveTime, err = self.tileServer.ServeTileRequest(tc, prio, wait_storage)
 	if err != nil {
-		return nil, err
+		return
 	}
 
+	// Times
+	r.RenderTime = renderTime.Nanoseconds()
+	r.SaveTime = saveTime.Nanoseconds()
+
+	// Tiles
 	for i := 0; i < len(tiles); i++ {
-		r = append(r, gopnikrpcutils.TileToRPC(&tiles[i]))
+		r.Tiles = append(r.Tiles, gopnikrpcutils.TileToRPC(&tiles[i]))
 	}
 
 	return

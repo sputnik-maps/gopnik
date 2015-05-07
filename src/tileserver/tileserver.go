@@ -102,10 +102,10 @@ func (self *TileServer) checkSaveQueue(coord *gopnik.TileCoord) []gopnik.Tile {
 	return self.saveQueueGet(&metacoord)
 }
 
-func (self *TileServer) ServeTileRequest(tc *gopnik.TileCoord, prio gopnikrpc.Priority, wait_storage bool) (tiles []gopnik.Tile, err error) {
+func (self *TileServer) ServeTileRequest(tc *gopnik.TileCoord, prio gopnikrpc.Priority, wait_storage bool) (tiles []gopnik.Tile, renderTime, saveTime time.Duration, err error) {
 	τ0 := time.Now()
 
-	tiles, err = self.serveTileRequest(tc, prio, wait_storage)
+	tiles, renderTime, saveTime, err = self.serveTileRequest(tc, prio, wait_storage)
 
 	// Statistics
 	hReqT.AddPoint(time.Since(τ0).Seconds())
@@ -115,32 +115,38 @@ func (self *TileServer) ServeTileRequest(tc *gopnik.TileCoord, prio gopnikrpc.Pr
 		hReqErr.Inc()
 	}
 
+	// TODO save to perflog
+
 	return
 }
 
-func (self *TileServer) serveTileRequest(tc *gopnik.TileCoord, prio gopnikrpc.Priority, wait_storage bool) (tiles []gopnik.Tile, err error) {
+func (self *TileServer) serveTileRequest(tc *gopnik.TileCoord, prio gopnikrpc.Priority, wait_storage bool) (tiles []gopnik.Tile, renderTime, saveTime time.Duration, err error) {
 	metacoord := app.App.Metatiler().TileToMetatile(tc)
 
 	if tc.Size != 0 && tc.Size != 1 && tc.Size != metacoord.Size {
-		return nil, &gopnikrpc.RenderError{Message: "Invalid tile size"}
+		return nil, 0, 0, &gopnikrpc.RenderError{Message: "Invalid tile size"}
 	}
 
 	if tiles = self.checkSaveQueue(tc); tiles == nil {
 		ansCh := make(chan *tilerender.RenderPoolResponse)
 
+		τ0 := time.Now()
 		if err = self.renders.EnqueueRequest(metacoord, ansCh, prio); err != nil {
-			return nil, &gopnikrpc.QueueLimitExceeded{}
+			return nil, 0, 0, &gopnikrpc.QueueLimitExceeded{}
 		}
 
 		ans := <-ansCh
+		renderTime = time.Since(τ0)
 		if ans.Error != nil {
-			return nil, &gopnikrpc.RenderError{Message: ans.Error.Error()}
+			return nil, 0, 0, &gopnikrpc.RenderError{Message: ans.Error.Error()}
 		}
 
 		if wait_storage {
+			τ1 := time.Now()
 			err := self.cacheMetatile(&metacoord, ans.Tiles)
+			saveTime = time.Since(τ1)
 			if err != nil {
-				return nil, &gopnikrpc.RenderError{Message: err.Error()}
+				return nil, 0, 0, &gopnikrpc.RenderError{Message: err.Error()}
 			}
 		} else {
 			go self.cacheMetatile(&metacoord, ans.Tiles)
@@ -150,15 +156,15 @@ func (self *TileServer) serveTileRequest(tc *gopnik.TileCoord, prio gopnikrpc.Pr
 	}
 
 	if tc.Size == 0 {
-		return nil, nil
+		return nil, renderTime, saveTime, nil
 	}
 
 	if tc.Size == metacoord.Size {
-		return tiles, nil
+		return tiles, renderTime, saveTime, nil
 	}
 
 	index := (tc.Y-metacoord.Y)*metacoord.Size + (tc.X - metacoord.X)
-	return []gopnik.Tile{tiles[index]}, nil
+	return []gopnik.Tile{tiles[index]}, renderTime, saveTime, nil
 }
 
 func (self *TileServer) ReloadStyle() error {
