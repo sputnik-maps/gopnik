@@ -21,7 +21,7 @@ func (self *fakeRender) Config() (r string, err error)  { return "?", nil }
 func (self *fakeRender) Stat() (r map[string]float64, err error) {
 	return map[string]float64{}, nil
 }
-func (self *fakeRender) Render(coord *types.Coord, prio gopnikrpc.Priority, wait_storage bool) (r *types.Tile, err error) {
+func (self *fakeRender) Render(coord *types.Coord, prio gopnikrpc.Priority, wait_storage bool) (r []*types.Tile, err error) {
 	return nil, nil
 }
 

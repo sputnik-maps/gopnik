@@ -14,15 +14,19 @@ type thriftTileServer struct {
 	tileServer *TileServer
 }
 
-func (self *thriftTileServer) Render(coord *types.Coord, prio gopnikrpc.Priority, wait_storage bool) (r *types.Tile, err error) {
+func (self *thriftTileServer) Render(coord *types.Coord, prio gopnikrpc.Priority, wait_storage bool) (r []*types.Tile, err error) {
 	tc := gopnikrpcutils.CoordFromRPC(coord)
 
-	tile, err := self.tileServer.ServeTileRequest(tc, prio, wait_storage)
+	tiles, err := self.tileServer.ServeTileRequest(tc, prio, wait_storage)
 	if err != nil {
 		return nil, err
 	}
 
-	return gopnikrpcutils.TileToRPC(tile), nil
+	for i := 0; i < len(tiles); i++ {
+		r = append(r, gopnikrpcutils.TileToRPC(&tiles[i]))
+	}
+
+	return
 }
 
 func RunServer(addr string, tileServer *TileServer) error {

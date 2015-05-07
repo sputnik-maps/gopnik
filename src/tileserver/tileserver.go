@@ -96,22 +96,16 @@ func (self *TileServer) saveQueueGet(coord *gopnik.TileCoord) []gopnik.Tile {
 	return nil
 }
 
-func (self *TileServer) checkSaveQueue(coord *gopnik.TileCoord) *gopnik.Tile {
+func (self *TileServer) checkSaveQueue(coord *gopnik.TileCoord) []gopnik.Tile {
 	metacoord := app.App.Metatiler().TileToMetatile(coord)
 
-	data := self.saveQueueGet(&metacoord)
-	if data == nil {
-		return nil
-	}
-
-	index := (coord.Y-metacoord.Y)*metacoord.Size + (coord.X - metacoord.X)
-	return &data[index]
+	return self.saveQueueGet(&metacoord)
 }
 
-func (self *TileServer) ServeTileRequest(tc *gopnik.TileCoord, prio gopnikrpc.Priority, wait_storage bool) (tile *gopnik.Tile, err error) {
+func (self *TileServer) ServeTileRequest(tc *gopnik.TileCoord, prio gopnikrpc.Priority, wait_storage bool) (tiles []gopnik.Tile, err error) {
 	τ0 := time.Now()
 
-	tile, err = self.serveTileRequest(tc, prio, wait_storage)
+	tiles, err = self.serveTileRequest(tc, prio, wait_storage)
 
 	// Statistics
 	hReqT.AddPoint(time.Since(τ0).Seconds())
@@ -124,36 +118,47 @@ func (self *TileServer) ServeTileRequest(tc *gopnik.TileCoord, prio gopnikrpc.Pr
 	return
 }
 
-func (self *TileServer) serveTileRequest(tc *gopnik.TileCoord, prio gopnikrpc.Priority, wait_storage bool) (tile *gopnik.Tile, err error) {
-	if tile = self.checkSaveQueue(tc); tile != nil {
-		return
-	}
-
+func (self *TileServer) serveTileRequest(tc *gopnik.TileCoord, prio gopnikrpc.Priority, wait_storage bool) (tiles []gopnik.Tile, err error) {
 	metacoord := app.App.Metatiler().TileToMetatile(tc)
 
-	ansCh := make(chan *tilerender.RenderPoolResponse)
-
-	if err = self.renders.EnqueueRequest(metacoord, ansCh, prio); err != nil {
-		return nil, &gopnikrpc.QueueLimitExceeded{}
+	if tc.Size != 0 && tc.Size != 1 && tc.Size != metacoord.Size {
+		return nil, &gopnikrpc.RenderError{Message: "Invalid tile size"}
 	}
 
-	ans := <-ansCh
-	if ans.Error != nil {
-		return nil, &gopnikrpc.RenderError{Message: ans.Error.Error()}
-	}
+	if tiles = self.checkSaveQueue(tc); tiles == nil {
+		ansCh := make(chan *tilerender.RenderPoolResponse)
 
-	if wait_storage {
-		err := self.cacheMetatile(&metacoord, ans.Tiles)
-		if err != nil {
-			return nil, &gopnikrpc.RenderError{Message: err.Error()}
+		if err = self.renders.EnqueueRequest(metacoord, ansCh, prio); err != nil {
+			return nil, &gopnikrpc.QueueLimitExceeded{}
 		}
-	} else {
-		go self.cacheMetatile(&metacoord, ans.Tiles)
+
+		ans := <-ansCh
+		if ans.Error != nil {
+			return nil, &gopnikrpc.RenderError{Message: ans.Error.Error()}
+		}
+
+		if wait_storage {
+			err := self.cacheMetatile(&metacoord, ans.Tiles)
+			if err != nil {
+				return nil, &gopnikrpc.RenderError{Message: err.Error()}
+			}
+		} else {
+			go self.cacheMetatile(&metacoord, ans.Tiles)
+		}
+
+		tiles = ans.Tiles
+	}
+
+	if tc.Size == 0 {
+		return nil, nil
+	}
+
+	if tc.Size == metacoord.Size {
+		return tiles, nil
 	}
 
 	index := (tc.Y-metacoord.Y)*metacoord.Size + (tc.X - metacoord.X)
-
-	return &ans.Tiles[index], nil
+	return []gopnik.Tile{tiles[index]}, nil
 }
 
 func (self *TileServer) ReloadStyle() error {
