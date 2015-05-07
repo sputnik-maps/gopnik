@@ -7,7 +7,7 @@ export PATH="$PATH:`pwd`/bin"
 
 echo "${bold}${magenta}Building Go code...${normal}"
 BINARIES=("gopnikrender" "gopnikdispatcher" "gopnikbench" "gopnikperf")
-BINARIES+=("gopnikprerender" "gopnikprerenderslave" "gopnikprerenderimport")
+BINARIES+=("gopnikprerender" "gopnikprerenderimport")
 BINARIES+=("gopnikcopy")
 for target in ${BINARIES[@]}
 do
