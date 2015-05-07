@@ -1,5 +1,6 @@
 package main
 
+/*
 import (
 	"fmt"
 	stdlog "log"
@@ -74,7 +75,6 @@ func runWebUI(addr string, p *coordinator, cache gopnik.CachePluginInterface) {
 		)
 	})
 
-	/*
 		m.Get("/configure/:addr", func(params martini.Params, r rendergold.Render) {
 			addr := params["addr"]
 			cfg, err := p.NodeConfig(addr)
@@ -134,7 +134,6 @@ func runWebUI(addr string, p *coordinator, cache gopnik.CachePluginInterface) {
 			}
 			r.Redirect("/nodes")
 		})
-	*/
 
 	m.Get("/charts/:addr", func(params martini.Params, r rendergold.Render) {
 		addr := params["addr"]
@@ -191,3 +190,4 @@ func runWebUI(addr string, p *coordinator, cache gopnik.CachePluginInterface) {
 	log.Info("Starting WebUI on %v", addr)
 	log.Fatal(http.ListenAndServe(addr, m))
 }
+*/

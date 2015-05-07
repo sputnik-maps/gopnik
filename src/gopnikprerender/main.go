@@ -87,18 +87,20 @@ func main() {
 	resChan := coordinator.Start()
 
 	// WebUI
-	if cfg.Prerender.UIAddr != "" {
-		cpI, err := plugins.DefaultPluginStore.Create(cfg.CachePlugin.Plugin, cfg.CachePlugin.PluginConfig)
-		if err != nil {
-			log.Fatal(err)
-		}
-		cp, ok := cpI.(gopnik.CachePluginInterface)
-		if !ok {
-			log.Fatal("Invalid cache plugin type")
-		}
+	/*
+		if cfg.Prerender.UIAddr != "" {
+			cpI, err := plugins.DefaultPluginStore.Create(cfg.CachePlugin.Plugin, cfg.CachePlugin.PluginConfig)
+			if err != nil {
+				log.Fatal(err)
+			}
+			cp, ok := cpI.(gopnik.CachePluginInterface)
+			if !ok {
+				log.Fatal("Invalid cache plugin type")
+			}
 
-		go runWebUI(cfg.Prerender.UIAddr, coordinator, cp)
-	}
+			go runWebUI(cfg.Prerender.UIAddr, coordinator, cp)
+		}
+	*/
 
 	// Cli and log
 	stopBar := make(chan int)
