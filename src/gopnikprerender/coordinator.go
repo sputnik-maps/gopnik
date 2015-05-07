@@ -89,17 +89,19 @@ func (self *coordinator) connLoop(addr string) {
 }
 
 func (self *coordinator) Start() <-chan perflog.PerfLogEntry {
-	self.connsWg.Add(len(self.addrs))
 	for _, addr := range self.addrs {
 		for i := 0; i < self.nodeQueueSize; i++ {
+			self.connsWg.Add(1)
 			go self.connLoop(addr)
 		}
 	}
+	go self.wait()
 	return self.results
 }
 
-func (self *coordinator) Wait() {
+func (self *coordinator) wait() {
 	self.connsWg.Wait()
+	close(self.results)
 }
 
 func (self *coordinator) Nodes() []string {

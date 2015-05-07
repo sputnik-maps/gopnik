@@ -111,7 +111,4 @@ func main() {
 	}
 
 	bar.FinishPrint("Done")
-
-	// Waiting...
-	coordinator.Wait()
 }
