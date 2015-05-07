@@ -14,23 +14,25 @@ import (
 )
 
 type coordinator struct {
-	addrs   []string
-	connsWg sync.WaitGroup
-	tasks   *plan
-	results chan perflog.PerfLogEntry
+	addrs         []string
+	connsWg       sync.WaitGroup
+	tasks         *plan
+	results       chan perflog.PerfLogEntry
+	nodeQueueSize int
 }
 
-func newCoordinator(addrs []string, bboxes []gopnik.TileCoord) *coordinator {
-	p := new(coordinator)
-	p.addrs = addrs
-	p.results = make(chan perflog.PerfLogEntry)
+func newCoordinator(addrs []string, nodeQueueSize int, bboxes []gopnik.TileCoord) *coordinator {
+	self := new(coordinator)
+	self.addrs = addrs
+	self.results = make(chan perflog.PerfLogEntry)
+	self.nodeQueueSize = nodeQueueSize
 
-	p.tasks = newPlan(bboxes)
+	self.tasks = newPlan(bboxes)
 
-	return p
+	return self
 }
 
-func (p *coordinator) connSub(addr string) error {
+func (self *coordinator) connSub(addr string) error {
 	// Creating connection
 	transportFactory := thrift.NewTFramedTransportFactory(thrift.NewTTransportFactory())
 	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
@@ -47,18 +49,18 @@ func (p *coordinator) connSub(addr string) error {
 	renderClient := gopnikrpc.NewRenderClientFactory(transport, protocolFactory)
 
 	for {
-		coord := p.tasks.GetTask()
+		coord := self.tasks.GetTask()
 		if coord == nil {
 			break
 		}
 
 		resp, err := renderClient.Render(gopnikrpcutils.CoordToRPC(coord), gopnikrpc.Priority_LOW, true)
 		if err != nil {
-			p.tasks.FailTask(*coord)
+			self.tasks.FailTask(*coord)
 			return err
 		}
-		p.tasks.DoneTask(*coord)
-		p.results <- perflog.PerfLogEntry{
+		self.tasks.DoneTask(*coord)
+		self.results <- perflog.PerfLogEntry{
 			Coord:      *coord,
 			Timestamp:  time.Now(),
 			RenderTime: time.Duration(resp.RenderTime),
@@ -68,21 +70,13 @@ func (p *coordinator) connSub(addr string) error {
 	return nil
 }
 
-func (p *coordinator) connLoop(addr string) {
+func (self *coordinator) connLoop(addr string) {
 	// Send 'done' for _current_ goroutine
-	defer p.connsWg.Done()
-
-	// Start another connection
-	// TODO !!!!!
-	// p.connsWg.Add(1)
-	// go func() {
-	// 	time.Sleep(100 * time.Millisecond)
-	// 	p.connLoop(addr)
-	// }()
+	defer self.connsWg.Done()
 
 	// Process queue
 	for {
-		err := p.connSub(addr)
+		err := self.connSub(addr)
 		if err == nil {
 			return
 		}
@@ -94,24 +88,26 @@ func (p *coordinator) connLoop(addr string) {
 	}
 }
 
-func (p *coordinator) Start() <-chan perflog.PerfLogEntry {
-	p.connsWg.Add(len(p.addrs))
-	for _, addr := range p.addrs {
-		go p.connLoop(addr)
+func (self *coordinator) Start() <-chan perflog.PerfLogEntry {
+	self.connsWg.Add(len(self.addrs))
+	for _, addr := range self.addrs {
+		for i := 0; i < self.nodeQueueSize; i++ {
+			go self.connLoop(addr)
+		}
 	}
-	return p.results
+	return self.results
 }
 
-func (p *coordinator) Wait() {
-	p.connsWg.Wait()
+func (self *coordinator) Wait() {
+	self.connsWg.Wait()
 }
 
-func (p *coordinator) Nodes() []string {
-	return p.addrs
+func (self *coordinator) Nodes() []string {
+	return self.addrs
 }
 
-func (p *coordinator) DoneTasks() (done int, total int) {
-	done = p.tasks.DoneTasks()
-	total = p.tasks.TotalTasks()
+func (self *coordinator) DoneTasks() (done int, total int) {
+	done = self.tasks.DoneTasks()
+	total = self.tasks.TotalTasks()
 	return
 }

@@ -45,8 +45,9 @@ func loadPlanFile() (coords []gopnik.TileCoord, err error) {
 func main() {
 	cfg := gopnikprerenderlib.PrerenderGlobalConfig{
 		Prerender: gopnikprerenderlib.PrerenderConfig{
-			UIAddr:    ":8088",
-			DebugAddr: ":8097",
+			UIAddr:        ":8088",
+			DebugAddr:     ":8097",
+			NodeQueueSize: 100,
 		},
 		CommonConfig: app.CommonConfig{
 			MetaSize: 8,
@@ -81,7 +82,7 @@ func main() {
 	}
 
 	// Plan
-	coordinator := newCoordinator(slavesAddrs, coords)
+	coordinator := newCoordinator(slavesAddrs, cfg.Prerender.NodeQueueSize, coords)
 	coords = nil
 	resChan := coordinator.Start()
 
