@@ -31,6 +31,7 @@ func newCoordinator(addrs []string, bboxes []gopnik.TileCoord) *coordinator {
 }
 
 func (p *coordinator) connSub(addr string) error {
+	// Creating connection
 	transportFactory := thrift.NewTFramedTransportFactory(thrift.NewTTransportFactory())
 	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
 	socket, err := thrift.NewTSocket(addr)
@@ -47,6 +48,10 @@ func (p *coordinator) connSub(addr string) error {
 
 	for {
 		coord := p.tasks.GetTask()
+		if coord == nil {
+			break
+		}
+
 		resp, err := renderClient.Render(gopnikrpcutils.CoordToRPC(coord), gopnikrpc.Priority_LOW, true)
 		if err != nil {
 			p.tasks.FailTask(*coord)
@@ -64,11 +69,24 @@ func (p *coordinator) connSub(addr string) error {
 }
 
 func (p *coordinator) connLoop(addr string) {
+	// Send 'done' for _current_ goroutine
 	defer p.connsWg.Done()
 
+	// Start another connection
+	// TODO !!!!!
+	// p.connsWg.Add(1)
+	// go func() {
+	// 	time.Sleep(100 * time.Millisecond)
+	// 	p.connLoop(addr)
+	// }()
+
+	// Process queue
 	for {
 		err := p.connSub(addr)
 		if err == nil {
+			return
+		}
+		if _, ok := err.(*gopnikrpc.QueueLimitExceeded); ok {
 			return
 		}
 		log.Error("Slave connection error: %v", err)
