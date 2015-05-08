@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"app"
@@ -24,6 +25,7 @@ var zoom = flag.Uint64("zoom", 0, "zoom")
 var size = flag.Uint64("size", 8, "size")
 var n = flag.Int("n", 1, "Iterations")
 var showProgress = flag.Bool("progress", false, "Show progress")
+var tagsF = flag.String("tags", "", "comma separetad list of tags")
 
 func latLon() (minC, maxC *gopnik.TileCoord) {
 	if *latMin != 0.0 && *lonMin != 0.0 && *latMax != 0.0 && *lonMax != 0.0 {
@@ -96,6 +98,11 @@ func main() {
 
 	app.App.Configure("", &cfg)
 
+	var tags []string
+	if *tagsF != "" {
+		tags = strings.Split(*tagsF, ",")
+	}
+
 	var slaveCmd []string
 	for _, rCfg := range cfg.RenderPools {
 		if *zoom < uint64(rCfg.MinZoom) || *zoom > uint64(rCfg.MaxZoom) {
@@ -108,6 +115,10 @@ func main() {
 	}
 
 	metaCoords := getMetaCoords()
+
+	for i := 0; i < len(metaCoords); i++ {
+		metaCoords[i].Tags = tags
+	}
 
 	render, err := tilerender.NewTileRender(slaveCmd)
 	if err != nil {
