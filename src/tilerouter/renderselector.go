@@ -26,8 +26,7 @@ type renderPoint struct {
 type RenderSelector struct {
 	renders []renderPoint
 	timeout time.Duration
-	alive   bool
-	aliveMu sync.Mutex
+	closed  chan struct{}
 }
 
 func NewRenderSelector(renders []string, pingPeriod time.Duration, timeout time.Duration) (*RenderSelector, error) {
@@ -40,28 +39,23 @@ func NewRenderSelector(renders []string, pingPeriod time.Duration, timeout time.
 	rs.timeout = timeout
 	rs.pingAll()
 	rs.updateServiceStatus()
-	rs.alive = true
+	rs.closed = make(chan struct{})
 	go func() {
 		period := pingPeriod
 		for {
-			time.Sleep(period)
-			t1 := time.Now()
-
-			rs.aliveMu.Lock()
-			if !rs.alive {
-				rs.aliveMu.Unlock()
+			select {
+			case <-rs.closed:
 				return
-			}
-			rs.aliveMu.Unlock()
+			case t1 := <-time.After(period):
+				rs.pingAll()
+				rs.updateServiceStatus()
 
-			rs.pingAll()
-			rs.updateServiceStatus()
-
-			Δt := time.Since(t1)
-			if Δt >= pingPeriod {
-				period = 0
-			} else {
-				period = pingPeriod - Δt
+				Δt := time.Since(t1)
+				if Δt >= pingPeriod {
+					period = 0
+				} else {
+					period = pingPeriod - Δt
+				}
 			}
 		}
 	}()
@@ -169,7 +163,5 @@ func (rs *RenderSelector) SelectRender(coord gopnik.TileCoord) string {
 }
 
 func (rs *RenderSelector) Stop() {
-	rs.aliveMu.Lock()
-	rs.alive = false
-	rs.aliveMu.Unlock()
+	close(rs.closed)
 }
