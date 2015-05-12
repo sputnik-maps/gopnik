@@ -11,6 +11,7 @@ import (
 
 	"app"
 	"gopnik"
+	"perflog"
 	"plugins"
 	_ "plugins_enabled"
 	"servicestatus"
@@ -24,6 +25,7 @@ type RenderConfig struct {
 	Addr          string          // Bind addr
 	DebugAddr     string          // Address for statistics
 	HotCacheDelay string          // Time period after cache set is done and before drop hot cache
+	PerfLog       string          //
 	Logging       json.RawMessage // see loghelper.go
 }
 
@@ -61,6 +63,10 @@ func main() {
 			MetaSize: 8,
 			TileSize: 256,
 		},
+	}
+
+	if cfg.Render.PerfLog != "" {
+		perflog.SetupPerflog(cfg.Render.PerfLog)
 	}
 
 	app.App.Configure("Render", &cfg)

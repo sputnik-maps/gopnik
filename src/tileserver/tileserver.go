@@ -11,6 +11,7 @@ import (
 	"app"
 	"gopnik"
 	"gopnikrpc"
+	"perflog"
 	"tilerender"
 )
 
@@ -115,7 +116,13 @@ func (self *TileServer) ServeTileRequest(tc *gopnik.TileCoord, prio gopnikrpc.Pr
 		hReqErr.Inc()
 	}
 
-	// TODO save to perflog
+	// save to perflog
+	perflog.SavePerf(perflog.PerfLogEntry{
+		Timestamp:  time.Now(),
+		Coord:      *tc,
+		RenderTime: renderTime,
+		SaverTime:  saveTime,
+	})
 
 	return
 }
