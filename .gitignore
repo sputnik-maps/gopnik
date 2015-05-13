@@ -3,9 +3,10 @@
 
 /src/plugins_enabled/config.go
 /src/program_version/version.go
-/src/gopnikprerender/bindata.go
 /src/gopnikperf/bindata.go
+/src/gopnikprerender/bindata.go
 /src/sampledata/bindata.go
+/src/gopnikwebstatic/bindata.go
 /src/sampledata/env.go
 /src/plugins_enabled/config_test.go
 

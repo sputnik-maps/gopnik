@@ -5,6 +5,7 @@ html
 		title Gopnik::{{.Page}}
 		link href=/css/bootstrap.min.css rel=stylesheet
 		link href=/css/bootstrap-theme.min.css rel=stylesheet
+		link href=/css/gopnik.css rel=stylesheet
 		style
 			body {padding-top: 50px;}
 		script type="text/javascript" src=/js/jquery.min.js
@@ -23,6 +24,13 @@ html
 							li
 								a href="/" Status
 						{{end}}
+						{{if eq .Page "Map"}}
+							li.active
+								a href="/map" Map
+						{{else}}
+							li
+								a href="/map" Map
+						{{end}}
 						{{if eq .Page "Nodes"}}
 							li.active
 								a href="/nodes" Nodes
@@ -30,6 +38,5 @@ html
 							li
 								a href="/nodes" Nodes
 						{{end}}
-		.container-fluid
+		.container-fluid.content-container
 			block content
-

@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"gopnik"
+	"gopnikwebstatic"
 	"perflog"
 
 	"github.com/go-martini/martini"
@@ -89,7 +90,7 @@ func getZooms(perfData []perflog.PerfLogEntry) (zrng zoomRange) {
 }
 
 func runWebUI(addr string, perfData []perflog.PerfLogEntry) {
-	m := staticbin.Classic(Asset)
+	m := staticbin.Classic(gopnikwebstatic.Asset)
 
 	m.Map(log.New(os.Stderr, "", log.LstdFlags))
 

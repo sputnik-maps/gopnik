@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"gopnik"
+	"gopnikwebstatic"
 
 	"github.com/go-martini/martini"
 	"github.com/martini-contrib/staticbin"
@@ -23,7 +24,7 @@ func (self *webUILogger) Write(p []byte) (n int, err error) {
 }
 
 func runWebUI(addr string, p *coordinator, cache gopnik.CachePluginInterface) {
-	m := staticbin.Classic(Asset)
+	m := staticbin.Classic(gopnikwebstatic.Asset)
 
 	var logger webUILogger
 	m.Map(stdlog.New(&logger, "[martini] ", stdlog.LstdFlags))
@@ -104,6 +105,16 @@ func runWebUI(addr string, p *coordinator, cache gopnik.CachePluginInterface) {
 		if err != nil {
 			log.Error("%v", err)
 		}
+	})
+
+	m.Get("/map", func(r rendergold.Render) {
+		r.HTML(
+			http.StatusOK,
+			"map",
+			map[string]interface{}{
+				"Page": "Map",
+			},
+		)
 	})
 
 	m.Get("/tiles/:z/:x/:y.png", func(params martini.Params) []byte {

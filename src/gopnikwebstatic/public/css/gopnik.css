@@ -9,3 +9,8 @@ html, body, .content-container,  #map {
 	padding-top: 15px;
 	padding-bottom: 15px;
 }
+
+.lf-zoom-control {
+	font-size: large;
+	font-weight: bold;
+}

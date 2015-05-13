@@ -4,4 +4,4 @@ block content
 	link href=/css/leaflet.css rel=stylesheet
 	#map.map
 	script type="text/javascript" src=/js/leaflet.js
-	script type="text/javascript" src=/js/heatmap.js
+	script type="text/javascript" src=/js/curmap.js
