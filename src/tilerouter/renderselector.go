@@ -31,10 +31,11 @@ func (self *thriftConn) Close() {
 }
 
 type renderPoint struct {
-	Addr        string
-	Status      int
-	Connections *list.List
-	Mu          sync.Mutex
+	Addr         string
+	Status       int
+	Connections  *list.List
+	MinFreeConns int
+	Mu           sync.Mutex
 }
 
 type RenderSelector struct {
@@ -70,6 +71,7 @@ func NewRenderSelector(renders []string, pingPeriod time.Duration, timeout time.
 			case t1 := <-time.After(period):
 				self.pingAll()
 				self.updateServiceStatus()
+				self.cleanConnections()
 
 				Δt := time.Since(t1)
 				if Δt >= pingPeriod {
@@ -118,6 +120,12 @@ func (self *RenderSelector) pingAll() {
 	wg.Wait()
 }
 
+func (self *RenderSelector) cleanConnections() {
+	for i := 0; i < len(self.renders); i++ {
+		self.cleanConnection(&self.renders[i])
+	}
+}
+
 func (self *RenderSelector) updateServiceStatus() {
 	for _, render := range self.renders {
 		if render.Status == Online {
@@ -158,6 +166,10 @@ func (self *RenderSelector) checkConnectionCache(rp *renderPoint) (conn *thriftC
 		elem := rp.Connections.Front()
 		conn = elem.Value.(*thriftConn)
 		rp.Connections.Remove(elem)
+		connLen := rp.Connections.Len()
+		if connLen < rp.MinFreeConns {
+			rp.MinFreeConns = connLen
+		}
 		return conn
 	}
 
@@ -171,6 +183,22 @@ func (self *RenderSelector) getConnection(rp *renderPoint) (conn *thriftConn, er
 	}
 
 	return self.connect(rp.Addr)
+}
+
+func (self *RenderSelector) cleanConnection(rp *renderPoint) {
+	rp.Mu.Lock()
+	defer rp.Mu.Unlock()
+
+	connLen := rp.Connections.Len()
+	if connLen > rp.MinFreeConns {
+		N := connLen - rp.MinFreeConns
+		if N > connLen/2 {
+			N = connLen / 2
+		}
+		for i := 0; i < N; i++ {
+			rp.Connections.Remove(rp.Connections.Front())
+		}
+	}
 }
 
 func (self *RenderSelector) ping(i int) int {
