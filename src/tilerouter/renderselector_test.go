@@ -61,15 +61,19 @@ func TestRoute(t *testing.T) {
 		Zoom: 1,
 		Size: 1,
 	}
-	back1 := rs.SelectRender(coord)
+	back1, err1 := rs.SelectRender(coord)
+	require.Nil(t, err1)
 	coord.X = 3
-	back2 := rs.SelectRender(coord)
+	back2, err2 := rs.SelectRender(coord)
+	require.Nil(t, err2)
 	coord.Y = 4
-	back3 := rs.SelectRender(coord)
+	back3, err3 := rs.SelectRender(coord)
+	require.Nil(t, err3)
 	coord.Zoom = 5
-	back4 := rs.SelectRender(coord)
+	back4, err4 := rs.SelectRender(coord)
+	require.Nil(t, err4)
 
 	require.True(t,
-		back1 != back2 || back1 != back3 || back1 != back4,
+		back1.Addr != back2.Addr || back1.Addr != back3.Addr || back1.Addr != back4.Addr,
 	)
 }

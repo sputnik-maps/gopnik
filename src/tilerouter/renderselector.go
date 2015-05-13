@@ -1,6 +1,7 @@
 package tilerouter
 
 import (
+	"container/list"
 	"fmt"
 	"gopnikrpc"
 	"hash/adler32"
@@ -18,37 +19,57 @@ const (
 	Online
 )
 
+type thriftConn struct {
+	Addr      string
+	Socket    *thrift.TSocket
+	Transport thrift.TTransport
+	Client    *gopnikrpc.RenderClient
+}
+
+func (self *thriftConn) Close() {
+	self.Transport.Close()
+}
+
 type renderPoint struct {
-	Addr   string
-	Status int
+	Addr        string
+	Status      int
+	Connections *list.List
+	Mu          sync.Mutex
 }
 
 type RenderSelector struct {
-	renders []renderPoint
-	timeout time.Duration
-	closed  chan struct{}
+	renders          []renderPoint
+	timeout          time.Duration
+	closed           chan struct{}
+	transportFactory thrift.TTransportFactory
+	protocolFactory  thrift.TProtocolFactory
 }
 
 func NewRenderSelector(renders []string, pingPeriod time.Duration, timeout time.Duration) (*RenderSelector, error) {
-	rs := new(RenderSelector)
-	rs.renders = make([]renderPoint, len(renders))
+	self := new(RenderSelector)
+	self.renders = make([]renderPoint, len(renders))
 	for i, addr := range renders {
-		rs.renders[i].Addr = addr
-		rs.renders[i].Status = Offline
+		self.renders[i].Addr = addr
+		self.renders[i].Status = Offline
+		self.renders[i].Connections = list.New()
 	}
-	rs.timeout = timeout
-	rs.pingAll()
-	rs.updateServiceStatus()
-	rs.closed = make(chan struct{})
+	self.timeout = timeout
+	self.transportFactory = thrift.NewTFramedTransportFactory(thrift.NewTTransportFactory())
+	self.protocolFactory = thrift.NewTBinaryProtocolFactoryDefault()
+
+	self.pingAll()
+	self.updateServiceStatus()
+	self.closed = make(chan struct{})
 	go func() {
 		period := pingPeriod
 		for {
 			select {
-			case <-rs.closed:
+			case <-self.closed:
+				self.closed <- struct{}{}
 				return
 			case t1 := <-time.After(period):
-				rs.pingAll()
-				rs.updateServiceStatus()
+				self.pingAll()
+				self.updateServiceStatus()
 
 				Δt := time.Since(t1)
 				if Δt >= pingPeriod {
@@ -59,14 +80,14 @@ func NewRenderSelector(renders []string, pingPeriod time.Duration, timeout time.
 			}
 		}
 	}()
-	return rs, nil
+	return self, nil
 }
 
-func (rs *RenderSelector) hash(str string) uint32 {
+func (self *RenderSelector) hash(str string) uint32 {
 	return adler32.Checksum([]byte(str))
 }
 
-func (rs *RenderSelector) statusToString(status int) string {
+func (self *RenderSelector) statusToString(status int) string {
 	switch status {
 	case Offline:
 		return "Offline"
@@ -78,17 +99,17 @@ func (rs *RenderSelector) statusToString(status int) string {
 	panic("?!")
 }
 
-func (rs *RenderSelector) pingAll() {
+func (self *RenderSelector) pingAll() {
 	var wg sync.WaitGroup
-	for i := 0; i < len(rs.renders); i++ {
+	for i := 0; i < len(self.renders); i++ {
 		wg.Add(1)
 		go func(i int) {
-			oldStatus := rs.renders[i].Status
-			rs.renders[i].Status = rs.ping(i)
+			oldStatus := self.renders[i].Status
+			self.renders[i].Status = self.ping(i)
 
-			log.Debug("'%v' is %v", rs.renders[i].Addr, rs.statusToString(rs.renders[i].Status))
-			if rs.renders[i].Status != oldStatus {
-				log.Info("New status for '%v': %v", rs.renders[i].Addr, rs.statusToString(rs.renders[i].Status))
+			log.Debug("'%v' is %v", self.renders[i].Addr, self.statusToString(self.renders[i].Status))
+			if self.renders[i].Status != oldStatus {
+				log.Info("New status for '%v': %v", self.renders[i].Addr, self.statusToString(self.renders[i].Status))
 			}
 
 			wg.Done()
@@ -97,8 +118,8 @@ func (rs *RenderSelector) pingAll() {
 	wg.Wait()
 }
 
-func (rs *RenderSelector) updateServiceStatus() {
-	for _, render := range rs.renders {
+func (self *RenderSelector) updateServiceStatus() {
+	for _, render := range self.renders {
 		if render.Status == Online {
 			servicestatus.SetOK()
 			return
@@ -107,24 +128,59 @@ func (rs *RenderSelector) updateServiceStatus() {
 	servicestatus.SetFAIL()
 }
 
+func (self *RenderSelector) connect(addr string) (*thriftConn, error) {
+	var err error
+	conn := &thriftConn{
+		Addr: addr,
+	}
+
+	conn.Socket, err = thrift.NewTSocketTimeout(addr, self.timeout)
+	if err != nil {
+		return nil, err
+	}
+
+	conn.Transport = self.transportFactory.GetTransport(conn.Socket)
+	err = conn.Transport.Open()
+	if err != nil {
+		return nil, err
+	}
+
+	conn.Client = gopnikrpc.NewRenderClientFactory(conn.Transport, self.protocolFactory)
+
+	return conn, nil
+}
+
+func (self *RenderSelector) checkConnectionCache(rp *renderPoint) (conn *thriftConn) {
+	rp.Mu.Lock()
+	defer rp.Mu.Unlock()
+
+	if rp.Connections.Len() > 0 {
+		elem := rp.Connections.Front()
+		conn = elem.Value.(*thriftConn)
+		rp.Connections.Remove(elem)
+		return conn
+	}
+
+	return nil
+}
+
+func (self *RenderSelector) getConnection(rp *renderPoint) (conn *thriftConn, err error) {
+	conn = self.checkConnectionCache(rp)
+	if conn != nil {
+		return
+	}
+
+	return self.connect(rp.Addr)
+}
+
 func (self *RenderSelector) ping(i int) int {
-	addr := self.renders[i].Addr
-
-	transportFactory := thrift.NewTFramedTransportFactory(thrift.NewTTransportFactory())
-	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
-	socket, err := thrift.NewTSocketTimeout(addr, self.timeout)
+	conn, err := self.getConnection(&self.renders[i])
 	if err != nil {
 		return Offline
 	}
-	transport := transportFactory.GetTransport(socket)
-	defer transport.Close()
-	err = transport.Open()
-	if err != nil {
-		return Offline
-	}
+	defer self.FreeConnection(conn)
 
-	renderClient := gopnikrpc.NewRenderClientFactory(transport, protocolFactory)
-	status, err := renderClient.Status()
+	status, err := conn.Client.Status()
 
 	if err != nil || !status {
 		return Offline
@@ -133,35 +189,52 @@ func (self *RenderSelector) ping(i int) int {
 	return Online
 }
 
-func (rs *RenderSelector) SetStatus(addr string, status int) {
-	for i := 0; i < len(rs.renders); i++ {
-		if rs.renders[i].Addr == addr {
-			rs.renders[i].Status = status
-			log.Info("New status for '%v': %v", addr, rs.statusToString(status))
+func (self *RenderSelector) SetStatus(addr string, status int) {
+	for i := 0; i < len(self.renders); i++ {
+		if self.renders[i].Addr == addr {
+			self.renders[i].Status = status
+			log.Info("New status for '%v': %v", addr, self.statusToString(status))
 			return
 		}
 	}
 }
 
-func (rs *RenderSelector) aliveRenders() (aRenders []int) {
-	for i := 0; i < len(rs.renders); i++ {
-		if rs.renders[i].Status == Online {
+func (self *RenderSelector) aliveRenders() (aRenders []int) {
+	for i := 0; i < len(self.renders); i++ {
+		if self.renders[i].Status == Online {
 			aRenders = append(aRenders, i)
 		}
 	}
 	return
 }
 
-func (rs *RenderSelector) SelectRender(coord gopnik.TileCoord) string {
-	aRenders := rs.aliveRenders()
+func (self *RenderSelector) SelectRender(coord gopnik.TileCoord) (*thriftConn, error) {
+	aRenders := self.aliveRenders()
 	if len(aRenders) == 0 {
-		return ""
+		return nil, nil
 	}
-	coordHash := rs.hash(fmt.Sprintf("%v/%v/%v", coord.Zoom, coord.X, coord.Y))
+	coordHash := self.hash(fmt.Sprintf("%v/%v/%v", coord.Zoom, coord.X, coord.Y))
 	renderId := aRenders[int(coordHash)%len(aRenders)]
-	return rs.renders[renderId].Addr
+	return self.getConnection(&self.renders[renderId])
 }
 
-func (rs *RenderSelector) Stop() {
-	close(rs.closed)
+func (self *RenderSelector) FreeConnection(conn *thriftConn) {
+	for _, rp := range self.renders {
+		if rp.Addr == conn.Addr {
+			rp.Mu.Lock()
+			rp.Connections.PushBack(conn)
+			rp.Mu.Unlock()
+			return
+		}
+	}
+}
+
+func (self *RenderSelector) Stop() {
+	self.closed <- struct{}{}
+	<-self.closed
+	for _, r := range self.renders {
+		for e := r.Connections.Front(); e != nil; e = e.Next() {
+			e.Value.(*thriftConn).Close()
+		}
+	}
 }

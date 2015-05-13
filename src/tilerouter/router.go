@@ -5,8 +5,6 @@ import (
 	"sync"
 	"time"
 
-	"git.apache.org/thrift.git/lib/go/thrift"
-
 	"gopnik"
 	"gopnikrpc"
 	"gopnikrpcutils"
@@ -47,22 +45,8 @@ func (self *TileRouter) UpdateRenders(renders []string) {
 	self.selector = selector
 }
 
-func (self *TileRouter) getTile(addr string, coord gopnik.TileCoord) (img []byte, err error) {
-	transportFactory := thrift.NewTFramedTransportFactory(thrift.NewTTransportFactory())
-	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
-	socket, err := thrift.NewTSocketTimeout(addr, self.timeout)
-	if err != nil {
-		return nil, fmt.Errorf("socket error: %v", err.Error())
-	}
-	transport := transportFactory.GetTransport(socket)
-	defer transport.Close()
-	err = transport.Open()
-	if err != nil {
-		return nil, fmt.Errorf("transport open error: %v", err.Error())
-	}
-
-	renderClient := gopnikrpc.NewRenderClientFactory(transport, protocolFactory)
-	resp, err := renderClient.Render(gopnikrpcutils.CoordToRPC(&coord), gopnikrpc.Priority_HIGH, false)
+func (self *TileRouter) getTile(conn *gopnikrpc.RenderClient, coord gopnik.TileCoord) (img []byte, err error) {
+	resp, err := conn.Render(gopnikrpcutils.CoordToRPC(&coord), gopnikrpc.Priority_HIGH, false)
 	if err != nil {
 		return nil, err
 	}
@@ -76,13 +60,15 @@ func (self *TileRouter) getTile(addr string, coord gopnik.TileCoord) (img []byte
 
 func (self *TileRouter) Tile(coord gopnik.TileCoord) (img []byte, err error) {
 	for i := 0; i < ATTEMPTS; i++ {
-		addr := self.selector.SelectRender(coord)
-		if addr == "" {
+		var conn *thriftConn
+		conn, err = self.selector.SelectRender(coord)
+		if conn == nil {
 			img, err = nil, fmt.Errorf("No available renders")
 			time.Sleep(10 * time.Second)
 			continue
 		}
-		img, err = self.getTile(addr, coord)
+		img, err = self.getTile(conn.Client, coord)
+		self.selector.FreeConnection(conn)
 		if err == nil {
 			return
 		}
