@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	stdlog "log"
 	"net/http"
@@ -45,132 +46,65 @@ func runWebUI(addr string, p *coordinator, cache gopnik.CachePluginInterface) {
 		)
 	})
 
-	/*
-		m.Get("/nodes", func(r rendergold.Render) {
-			type node struct {
-				Addr   string
-				Savers int
-				app.RenderPoolsConfig
-			}
-			addrs := p.Nodes()
-			nodes := make([]node, len(addrs))
-			for i, addr := range addrs {
-				nodes[i].Addr = addr
-				cfg, err := p.NodeConfig(addr)
-				if err == nil {
-					nodes[i].RenderPoolsConfig = cfg.RenderPoolsConfig
-					nodes[i].Savers = cfg.SaverThreads
-				}
-			}
+	m.Get("/nodes", func(r rendergold.Render) {
+		type node struct {
+			Addr   string
+			Status bool
+		}
+		addrs := p.Nodes()
+		nodes := make([]node, len(addrs))
+		for i, addr := range addrs {
+			nodes[i].Addr = addr
+			nodes[i].Status = p.NodeStatus(addr)
+		}
 
-			r.HTML(
-				http.StatusOK,
-				"nodes",
-				map[string]interface{}{
-					"Page":  "Nodes",
-					"Nodes": nodes,
-				},
-			)
-		})
+		r.HTML(
+			http.StatusOK,
+			"nodes",
+			map[string]interface{}{
+				"Page":  "Nodes",
+				"Nodes": nodes,
+			},
+		)
+	})
 
-				m.Get("/configure/:addr", func(params martini.Params, r rendergold.Render) {
-					addr := params["addr"]
-					cfg, err := p.NodeConfig(addr)
-					if err != nil {
-						log.Error("%v", err)
-						r.Redirect("/nodes")
-						return
-					}
+	m.Get("/charts/:addr", func(params martini.Params, r rendergold.Render) {
+		addr := params["addr"]
+		mon := p.NodeMonitor(addr)
+		if mon == nil {
+			r.Redirect("/nodes")
+		}
+		r.HTML(
+			http.StatusOK,
+			"charts",
+			map[string]interface{}{
+				"Page":    "Charts",
+				"Addr":    addr,
+				"Metrics": mon.Metrics(),
+			},
+		)
+	})
 
-					r.HTML(
-						http.StatusOK,
-						"configure",
-						map[string]interface{}{
-							"Page":    "Configure",
-							"Addr":    addr,
-							"Renders": cfg.RenderThreads,
-							"Savers":  cfg.SaverThreads,
-							"TTL":     cfg.TTL,
-						},
-					)
-
-				})
-
-				m.Post("/configure", func(req *http.Request, r rendergold.Render) {
-					err := req.ParseForm()
-					if err != nil {
-						log.Error("%v", err)
-						r.Redirect("/nodes")
-						return
-					}
-					addr := req.PostFormValue("Addr")
-					var cfg gopnikprerenderlib.RConfig
-					_, err = fmt.Sscan(req.PostFormValue("Renders"), &cfg.RenderThreads)
-					if err != nil {
-						log.Error("%v", err)
-						r.Redirect("/nodes")
-						return
-					}
-					_, err = fmt.Sscan(req.PostFormValue("Savers"), &cfg.SaverThreads)
-					if err != nil {
-						log.Error("%v", err)
-						r.Redirect("/nodes")
-						return
-					}
-					_, err = fmt.Sscan(req.PostFormValue("TTL"), &cfg.TTL)
-					if err != nil {
-						log.Error("%v", err)
-						r.Redirect("/nodes")
-						return
-					}
-
-					err = p.SetNodeConfig(addr, cfg)
-					if err != nil {
-						log.Error("%v", err)
-						r.Redirect("/nodes")
-						return
-					}
-					r.Redirect("/nodes")
-				})
-
-			m.Get("/charts/:addr", func(params martini.Params, r rendergold.Render) {
-				addr := params["addr"]
-				mon, err := p.NodeMonitor(addr)
-				if err != nil || mon == nil {
-					r.Redirect("/nodes")
-				}
-				r.HTML(
-					http.StatusOK,
-					"charts",
-					map[string]interface{}{
-						"Page":    "Charts",
-						"Addr":    addr,
-						"Metrics": mon.Metrics(),
-					},
-				)
-			})
-
-			m.Get("/chart/:addr", func(params martini.Params, res http.ResponseWriter, req *http.Request) {
-				addr := params["addr"]
-				mon, err := p.NodeMonitor(addr)
-				if err != nil || mon == nil {
-					res.WriteHeader(400)
-					return
-				}
-				metricArgs := req.URL.Query()["metric"]
-				if len(metricArgs) != 1 {
-					res.WriteHeader(400)
-					return
-				}
-				metric := metricArgs[0]
-				points := mon.Points(metric)
-				enc := json.NewEncoder(res)
-				err = enc.Encode(points)
-				if err != nil {
-					log.Error("%v", err)
-				}
-			})
-	*/
+	m.Get("/chart/:addr", func(params martini.Params, res http.ResponseWriter, req *http.Request) {
+		addr := params["addr"]
+		mon := p.NodeMonitor(addr)
+		if mon == nil {
+			res.WriteHeader(400)
+			return
+		}
+		metricArgs := req.URL.Query()["metric"]
+		if len(metricArgs) != 1 {
+			res.WriteHeader(400)
+			return
+		}
+		metric := metricArgs[0]
+		points := mon.Points(metric)
+		enc := json.NewEncoder(res)
+		err := enc.Encode(points)
+		if err != nil {
+			log.Error("%v", err)
+		}
+	})
 
 	m.Get("/tiles/:z/:x/:y.png", func(params martini.Params) []byte {
 		z, _ := strconv.ParseUint(params["z"], 10, 64)
