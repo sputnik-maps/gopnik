@@ -10,6 +10,7 @@ import (
 
 	"git.apache.org/thrift.git/lib/go/thrift"
 
+	"app"
 	"gopnik"
 	"servicestatus"
 )
@@ -241,7 +242,8 @@ func (self *RenderSelector) SelectRender(coord gopnik.TileCoord) (*thriftConn, e
 	if len(aRenders) == 0 {
 		return nil, nil
 	}
-	coordHash := self.hash(fmt.Sprintf("%v/%v/%v", coord.Zoom, coord.X, coord.Y))
+	metacoord := app.App.Metatiler().TileToMetatile(&coord)
+	coordHash := self.hash(fmt.Sprintf("%v/%v/%v", metacoord.Zoom, metacoord.X, metacoord.Y))
 	renderId := aRenders[int(coordHash)%len(aRenders)]
 	return self.getConnection(&self.renders[renderId])
 }
