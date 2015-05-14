@@ -126,6 +126,7 @@ func (srv *RouterServer) serveTileRequest(w http.ResponseWriter, r *http.Request
 		}
 	}
 
+	w.Header().Set("Server", "Gopnik")
 	w.Header().Set("Content-Type", "image/png")
 	_, err = w.Write(tile)
 	if err != nil {
