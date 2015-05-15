@@ -20,6 +20,7 @@ main(int argc, char *argv[]) {
 		unsigned tileSize = 256;
 		int bufferSize = -1;
 		double scaleFactor = 1.0;
+		std::string imageFormat = "png24";
 
 		options::options_description desc (std::string (argv[0]).append(" options"));
 		desc.add_options()
@@ -30,6 +31,7 @@ main(int argc, char *argv[]) {
 			("fontsPath", options::value<std::vector<std::string>>(), "fontsPath")
 			("pluginsPath", options::value<std::string>(), "pluginsPath")
 			("scaleFactor", options::value<double>(), "scaleFactor")
+			("imageFormat", options::value<std::string>(), "imageFormat")
 		;
 		options::variables_map args;
 		options::store (options::command_line_parser (argc, argv).options (desc)
@@ -62,10 +64,13 @@ main(int argc, char *argv[]) {
 		if (args.count("scaleFactor")) {
 			scaleFactor = args["scaleFactor"].as<double>();
 		}
+		if (args.count("imageFormat")) {
+			imageFormat = args["imageFormat"].as<std::string>();
+		}
 
 		// Set up render
 		RenderImpl render{stylesheet, fontsPath, pluginsPath,
-			tileSize, bufferSize, scaleFactor};
+			tileSize, bufferSize, scaleFactor, imageFormat};
 
 		Loop loop{0 /* stdin */, 1 /* stdout */, render};
 

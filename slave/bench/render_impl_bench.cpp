@@ -14,7 +14,7 @@ class RenderImplBenchFixture : public celero::TestFixture {
 	public:
 		virtual void setUp(int64_t experimentValue) {
 			boost::filesystem::current_path(GOPNIK_SAMPLE_DATA_PATH);
-			render_.reset(new RenderImpl{"stylesheet.xml", std::vector<std::string>(), MAPNIK_PLUGINDIR, 256, 128, 1.0});
+			render_.reset(new RenderImpl{"stylesheet.xml", std::vector<std::string>(), MAPNIK_PLUGINDIR, 256, 128, 1.0, "png256"});
 		}
 
 		virtual void tearDown() {

@@ -45,10 +45,11 @@ class RenderImpl::impl {
 		unsigned tile_size_;
 		int buffer_size_;
 		double scale_factor_;
+		std::string image_format_;
 		std::unique_ptr<void, x_pj_free> pj_source_;
 		std::unique_ptr<void, x_pj_free> pj_target_;
 	public:
-		impl(std::string stylesheet, std::vector<std::string> fonts_path, std::string plugins_path, unsigned tile_size, int buffer_size, double scale_factor);
+		impl(std::string stylesheet, std::vector<std::string> fonts_path, std::string plugins_path, unsigned tile_size, int buffer_size, double scale_factor, std::string const& image_format);
 		void appendTile(std::shared_ptr<Result> res, mapnik::image_view<image_data_32> vw);
 		mapnik::box2d<double> getBbox(Task const &task);
 	protected:
@@ -57,15 +58,16 @@ class RenderImpl::impl {
 		void convertPoint(double &x, double &y, int zoom);
 };
 
-RenderImpl::RenderImpl(std::string stylesheet, std::vector<std::string> fonts_path, std::string plugins_path, unsigned tile_size, int buffer_size, double scale_factor)
-	: pimpl_(new impl{stylesheet, fonts_path, plugins_path, tile_size, buffer_size, scale_factor})
+RenderImpl::RenderImpl(std::string stylesheet, std::vector<std::string> fonts_path, std::string plugins_path, unsigned tile_size, int buffer_size, double scale_factor, std::string const& image_format)
+	: pimpl_(new impl{stylesheet, fonts_path, plugins_path, tile_size, buffer_size, scale_factor, image_format})
 {
 }
 
-RenderImpl::impl::impl(std::string stylesheet, std::vector<std::string> fonts_path, std::string plugins_path, unsigned tile_size, int buffer_size, double scale_factor)
+RenderImpl::impl::impl(std::string stylesheet, std::vector<std::string> fonts_path, std::string plugins_path, unsigned tile_size, int buffer_size, double scale_factor, std::string const& image_format)
 	: tile_size_(tile_size)
 	, buffer_size_(buffer_size)
 	, scale_factor_(scale_factor)
+	, image_format_(image_format)
 {
 	mapnik::datasource_cache::instance().register_datasources(plugins_path);
 	for (auto it = fonts_path.begin(); it != fonts_path.end(); ++it) {
@@ -175,7 +177,7 @@ RenderImpl::impl::appendTile(std::shared_ptr<Result> res, mapnik::image_view<ima
 	Tile *tile = res->add_tiles();
 
 	// Encode tile
-	std::string tile_png = mapnik::save_to_string(vw, "png256");
+	std::string tile_png = mapnik::save_to_string(vw, image_format_);
 	tile->set_png(tile_png);
 
 	// Analyze tile

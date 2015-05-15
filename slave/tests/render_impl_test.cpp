@@ -12,7 +12,7 @@ using namespace gopnik;
 TEST(Render, GenTile) {
 	boost::filesystem::current_path(GOPNIK_SAMPLE_DATA_PATH);
 
-	RenderImpl render{"stylesheet.xml", std::vector<std::string>(), MAPNIK_PLUGINDIR, 256, 128, 1.0};
+	RenderImpl render{"stylesheet.xml", std::vector<std::string>(), MAPNIK_PLUGINDIR, 256, 128, 1.0, "png256"};
 	Task task;
 	task.set_x(0);
 	task.set_y(0);
@@ -33,7 +33,7 @@ TEST(Render, GenTile) {
 TEST(Render, Gen10Tiles) {
 	boost::filesystem::current_path(GOPNIK_SAMPLE_DATA_PATH);
 
-	RenderImpl render{"stylesheet.xml", std::vector<std::string>(), MAPNIK_PLUGINDIR, 256, 128, 1.0};
+	RenderImpl render{"stylesheet.xml", std::vector<std::string>(), MAPNIK_PLUGINDIR, 256, 128, 1.0, "png256"};
 	Task task;
 	task.set_x(0);
 	task.set_y(0);
@@ -49,7 +49,7 @@ TEST(Render, Gen10Tiles) {
 TEST(Render, GenMetaTile1z) {
 	boost::filesystem::current_path(GOPNIK_SAMPLE_DATA_PATH);
 
-	RenderImpl render{"stylesheet.xml", std::vector<std::string>(), MAPNIK_PLUGINDIR, 256, 128, 1.0};
+	RenderImpl render{"stylesheet.xml", std::vector<std::string>(), MAPNIK_PLUGINDIR, 256, 128, 1.0, "png256"};
 	Task task;
 	task.set_x(0);
 	task.set_y(0);
@@ -70,7 +70,7 @@ TEST(Render, GenMetaTile1z) {
 TEST(Render, GenMetaTile) {
 	boost::filesystem::current_path(GOPNIK_SAMPLE_DATA_PATH);
 
-	RenderImpl render{"stylesheet.xml", std::vector<std::string>(), MAPNIK_PLUGINDIR, 256, 128, 1.0};
+	RenderImpl render{"stylesheet.xml", std::vector<std::string>(), MAPNIK_PLUGINDIR, 256, 128, 1.0, "png256"};
 	Task task;
 	task.set_x(33);
 	task.set_y(77);
