@@ -6,7 +6,9 @@ import (
 	stdlog "log"
 	"math"
 	"net/http"
+	"os"
 	"sync"
+	"time"
 
 	"github.com/go-martini/martini"
 	"github.com/orofarne/hmetrics2"
@@ -15,7 +17,13 @@ import (
 	"servicestatus"
 )
 
+var startTime time.Time
+
 type xmlstatusLogger struct {
+}
+
+func init() {
+	startTime = time.Now()
 }
 
 func (self *xmlstatusLogger) Write(p []byte) (n int, err error) {
@@ -58,13 +66,16 @@ func CreateXMLStatusHandler() http.Handler {
 	m.Get("/stat", func(w http.ResponseWriter) {
 		mu.Lock()
 		defer mu.Unlock()
-		w.Header().Add("Content-type", "text/xml")
+		w.Header().Add("Content-type", "application/xml")
 		w.Write([]byte(xml.Header))
-		w.Write([]byte("<stat>\n"))
+		w.Write([]byte(fmt.Sprintf("<stat:document xmlns:stat=\"http://xml.sputnik.ru/stat\" name=\"%v\" version=\"%v\">\n", os.Args[0], program_version.GetVersion())))
+		w.Write([]byte(fmt.Sprintf("  <stat>\n    <start_time>%v</start_time>\n  </stat>\n", startTime)))
+		w.Write([]byte("  <user>\n"))
 		for k, v := range data {
 			w.Write([]byte(fmt.Sprintf("    <%s>%v</%s>\n", k, v, k)))
 		}
-		w.Write([]byte("</stat>\n"))
+		w.Write([]byte("  </user>\n"))
+		w.Write([]byte("</stat:document>\n"))
 	})
 
 	return m
