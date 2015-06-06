@@ -11,6 +11,7 @@ func CoordToRPC(coord *gopnik.TileCoord) *types.Coord {
 		Y:    int64(coord.Y),
 		Zoom: int16(coord.Zoom),
 		Size: int16(coord.Size),
+		Tags: map[string]bool{},
 	}
 
 	for _, tag := range coord.Tags {
