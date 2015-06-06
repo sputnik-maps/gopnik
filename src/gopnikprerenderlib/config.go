@@ -17,9 +17,8 @@ type PrerenderConfig struct {
 }
 
 type PrerenderGlobalConfig struct {
-	Prerender             PrerenderConfig  // Prerender config
-	CachePlugin           app.PluginConfig //
-	app.CommonConfig                       //
-	app.RenderPoolsConfig                  //
-	json.OtherKeys                         //
+	Prerender        PrerenderConfig  // Prerender config
+	CachePlugin      app.PluginConfig //
+	app.CommonConfig                  //
+	json.OtherKeys                    //
 }
