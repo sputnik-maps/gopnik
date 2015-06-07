@@ -10,6 +10,7 @@ html
 			body {padding-top: 50px;}
 		script type="text/javascript" src=/js/jquery.min.js
 		script type="text/javascript" src=/js/bootstrap.min.js
+		block head_ext
 	body
 		.navbar.navbar-inverse.navbar-fixed-top
 			.container-fluid

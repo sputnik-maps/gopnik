@@ -21,4 +21,4 @@ block content
 					a href="/charts/{{.Addr | urlquery}}"
 						span.glyphicon.glyphicon-signal
 						| &nbsp;Monitoring
-	{{end}}
+		{{end}}

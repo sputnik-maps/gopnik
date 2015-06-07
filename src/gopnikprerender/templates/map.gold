@@ -1,7 +1,10 @@
 extends ./base
 
-block content
+block head_ext
+	link href=/css/gopnik_map.css rel=stylesheet
 	link href=/css/leaflet.css rel=stylesheet
+
+block content
 	#map.map
 	script type="text/javascript" src=/js/leaflet.js
 	script type="text/javascript" src=/js/curmap.js
