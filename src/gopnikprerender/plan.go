@@ -89,6 +89,9 @@ func (self *plan) GetTask() *gopnik.TileCoord {
 }
 
 func (self *plan) setStatus(coord gopnik.TileCoord, status uint8) error {
+	self.mu.Lock()
+	defer self.mu.Unlock()
+
 	for i, c := range self.bboxes {
 		if coord.Equals(&c) {
 			self.status[i] = status
