@@ -27,7 +27,7 @@ func newRenderQueue(reqLimit uint) *renderQueue {
 }
 
 func (rq *renderQueue) Size() int {
-	return cap(rq.tasksCh)
+	return len(rq.tasksCh)
 }
 
 func (rq *renderQueue) Push(coord gopnik.TileCoord, resCh chan<- *RenderPoolResponse) error {
