@@ -50,6 +50,8 @@ func newCoordinator(addrs []string, nodeQueueSize int, bboxes []gopnik.TileCoord
 }
 
 func (self *coordinator) connSub(addr string, f func(addr string, client *gopnikrpc.RenderClient) error) error {
+	log.Debug("Connecting to %v...", addr)
+
 	// Creating connection
 	transportFactory := thrift.NewTFramedTransportFactory(thrift.NewTTransportFactory())
 	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
@@ -83,6 +85,8 @@ func (self *coordinator) taskConnF(addr string, client *gopnikrpc.RenderClient) 
 	if coord == nil {
 		return &stop{}
 	}
+
+	log.Debug("Sending %v to %v...", coord, addr)
 
 	resp, err := client.Render(gopnikrpcutils.CoordToRPC(coord), gopnikrpc.Priority_LOW, true)
 	if err != nil {
