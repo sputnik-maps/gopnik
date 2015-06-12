@@ -39,9 +39,13 @@ func (self *plan) DoneTasks() int {
 	self.mu.Lock()
 	defer self.mu.Unlock()
 
+	return self.countTasks(DONE)
+}
+
+func (self *plan) countTasks(status uint8) int {
 	result := 0
 	for _, s := range self.status {
-		if s == DONE {
+		if s == status {
 			result++
 		}
 	}
@@ -76,7 +80,7 @@ func (self *plan) GetTask() *gopnik.TileCoord {
 				return nil
 			}
 			// Waiting...
-			log.Debug("Waiting for undone tasks...")
+			log.Debug("Waiting for %v tasks...", self.countTasks(INPROGRESS))
 			self.condMu.Lock()
 			self.mu.Unlock()
 			self.cond.Wait()

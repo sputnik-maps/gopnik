@@ -91,7 +91,7 @@ func (self *coordinator) taskConnF(addr string, client *gopnikrpc.RenderClient) 
 	resp, err := client.Render(gopnikrpcutils.CoordToRPC(coord), gopnikrpc.Priority_LOW, true)
 	if err != nil {
 		self.tasks.FailTask(*coord)
-		return err
+		return fmt.Errorf("%v on %v", err, coord)
 	}
 	self.tasks.DoneTask(*coord)
 	self.results <- perflog.PerfLogEntry{
