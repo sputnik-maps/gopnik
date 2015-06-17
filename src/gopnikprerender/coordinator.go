@@ -2,15 +2,12 @@ package main
 
 import (
 	"fmt"
-	"gopnikrpc"
-	"gopnikrpcutils"
-	"perflog"
 	"sync"
 	"time"
 
-	"git.apache.org/thrift.git/lib/go/thrift"
-
 	"gopnik"
+	"gopnikrpc"
+	"perflog"
 )
 
 type coordinator struct {
@@ -49,85 +46,50 @@ func newCoordinator(addrs []string, nodeQueueSize int, bboxes []gopnik.TileCoord
 	return self
 }
 
-func (self *coordinator) connSub(addr string, f func(addr string, client *gopnikrpc.RenderClient) error) error {
-	log.Debug("Connecting to %v...", addr)
-
-	// Creating connection
-	transportFactory := thrift.NewTFramedTransportFactory(thrift.NewTTransportFactory())
-	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
-	socket, err := thrift.NewTSocket(addr)
+func (self *coordinator) connF(addr string) error {
+	conn := newConnection(addr)
+	defer conn.Close()
+	err := conn.Connect()
 	if err != nil {
-		return fmt.Errorf("socket error: %v", err.Error())
-	}
-	transport := transportFactory.GetTransport(socket)
-	defer transport.Close()
-	err = transport.Open()
-	if err != nil {
-		return fmt.Errorf("transport open error: %v", err.Error())
-	}
-	renderClient := gopnikrpc.NewRenderClientFactory(transport, protocolFactory)
-
-	for {
-		err := f(addr, renderClient)
-		if err != nil {
-			if _, ok := err.(*stop); ok {
-				break
-			} else {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-func (self *coordinator) taskConnF(addr string, client *gopnikrpc.RenderClient) error {
-	coord := self.tasks.GetTask()
-	if coord == nil {
-		return &stop{}
-	}
-
-	log.Debug("Sending %v to %v...", coord, addr)
-
-	resp, err := client.Render(gopnikrpcutils.CoordToRPC(coord), gopnikrpc.Priority_LOW, true)
-	if err != nil {
-		self.tasks.FailTask(*coord)
-		return fmt.Errorf("%v on %v", err, coord)
-	}
-	self.tasks.DoneTask(*coord)
-	self.results <- perflog.PerfLogEntry{
-		Coord:      *coord,
-		Timestamp:  time.Now(),
-		RenderTime: time.Duration(resp.RenderTime),
-		SaverTime:  time.Duration(resp.SaveTime),
-	}
-	return nil
-}
-
-func (self *coordinator) monitorConnF(addr string, client *gopnikrpc.RenderClient) error {
-	worker := func(t time.Time) error {
-		data, err := client.Stat()
-		if err != nil {
-			self.setNodeStatus(addr, false)
-			return err
-		}
-		self.setNodeStatus(addr, true)
-
-		mon := self.NodeMonitor(addr)
-		for k, v := range data {
-			mon.AddPoint(k, t, v)
-		}
-		return nil
-	}
-
-	if err := worker(time.Now()); err != nil {
 		return err
 	}
 
-	ticker := time.Tick(1 * time.Minute)
-	for now := range ticker {
-		if err := worker(now); err != nil {
-			return err
+	for {
+		coord := self.tasks.GetTask()
+		if coord == nil {
+			return &stop{}
 		}
+
+		res, err := conn.ProcessTask(*coord)
+		if err != nil || res == nil {
+			self.tasks.FailTask(*coord)
+			return fmt.Errorf("%v on %v", err, coord)
+		}
+		self.tasks.DoneTask(*coord)
+		self.results <- *res
+	}
+	return nil
+}
+
+func (self *coordinator) monitorConnF(addr string, t time.Time) error {
+	conn := newConnection(addr)
+	err := conn.Connect()
+	defer conn.Close()
+	if err != nil {
+		return err
+	}
+
+	client := conn.Client()
+	data, err := client.Stat()
+	if err != nil {
+		self.setNodeStatus(addr, false)
+		return err
+	}
+	self.setNodeStatus(addr, true)
+
+	mon := self.NodeMonitor(addr)
+	for k, v := range data {
+		mon.AddPoint(k, t, v)
 	}
 	return nil
 }
@@ -136,28 +98,31 @@ func (self *coordinator) connLoop(addr string) {
 	// Send 'done' for _current_ goroutine
 	defer self.connsWg.Done()
 
-	// Process queue
+	// Process tasks
 	for {
-		err := self.connSub(addr, self.taskConnF)
-		if err == nil {
+		err := self.connF(addr)
+		if _, ok := err.(*stop); ok {
 			return
 		}
 		if _, ok := err.(*gopnikrpc.QueueLimitExceeded); ok {
 			return
 		}
+
 		log.Error("Slave connection error: %v", err)
 		time.Sleep(10 * time.Second)
 	}
 }
 
 func (self *coordinator) monitorLoop(addr string) {
-	for {
-		err := self.connSub(addr, self.monitorConnF)
-		if err == nil {
-			return
+	if err := self.monitorConnF(addr, time.Now()); err != nil {
+		log.Error("Connection [%v] error: %v", addr, err)
+	}
+
+	ticker := time.Tick(1 * time.Minute)
+	for now := range ticker {
+		if err := self.monitorConnF(addr, now); err != nil {
+			log.Error("Connection [%v] error: %v", addr, err)
 		}
-		log.Error("Slave connection error: %v", err)
-		time.Sleep(10 * time.Second)
 	}
 }
 
