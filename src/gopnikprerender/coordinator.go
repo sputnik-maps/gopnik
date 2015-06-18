@@ -12,6 +12,7 @@ import (
 
 type coordinator struct {
 	addrs          []string
+	timeout        time.Duration
 	connsWg        sync.WaitGroup
 	tasks          *plan
 	results        chan perflog.PerfLogEntry
@@ -25,9 +26,10 @@ type stop struct{}
 
 func (self *stop) Error() string { return "Stop" }
 
-func newCoordinator(addrs []string, nodeQueueSize int, bboxes []gopnik.TileCoord) *coordinator {
+func newCoordinator(addrs []string, timeout time.Duration, nodeQueueSize int, bboxes []gopnik.TileCoord) *coordinator {
 	self := new(coordinator)
 	self.addrs = addrs
+	self.timeout = timeout
 	self.results = make(chan perflog.PerfLogEntry)
 	self.nodeQueueSize = nodeQueueSize
 
@@ -47,7 +49,7 @@ func newCoordinator(addrs []string, nodeQueueSize int, bboxes []gopnik.TileCoord
 }
 
 func (self *coordinator) connF(addr string) error {
-	conn := newConnection(addr)
+	conn := newConnection(addr, self.timeout)
 	defer conn.Close()
 	err := conn.Connect()
 	if err != nil {
@@ -72,7 +74,7 @@ func (self *coordinator) connF(addr string) error {
 }
 
 func (self *coordinator) monitorConnF(addr string, t time.Time) error {
-	conn := newConnection(addr)
+	conn := newConnection(addr, self.timeout)
 	err := conn.Connect()
 	defer conn.Close()
 	if err != nil {

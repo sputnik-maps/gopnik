@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 
 	"app"
 	"gopnik"
@@ -45,9 +46,10 @@ func loadPlanFile() (coords []gopnik.TileCoord, err error) {
 func main() {
 	cfg := gopnikprerenderlib.PrerenderGlobalConfig{
 		Prerender: gopnikprerenderlib.PrerenderConfig{
-			UIAddr:        ":8088",
-			DebugAddr:     ":8097",
-			NodeQueueSize: 100,
+			UIAddr:         ":8088",
+			DebugAddr:      ":8097",
+			NodeQueueSize:  100,
+			RequestTimeout: "1h",
 		},
 		CommonConfig: app.CommonConfig{
 			MetaSize: 8,
@@ -81,8 +83,14 @@ func main() {
 		perflog.SetupPerflog(cfg.Prerender.PerfLog)
 	}
 
+	// Timeouts
+	requestTimeout, err := time.ParseDuration(cfg.Prerender.RequestTimeout)
+	if err != nil {
+		log.Fatalf("Invalid request timeout: %v", err)
+	}
+
 	// Plan
-	coordinator := newCoordinator(slavesAddrs, cfg.Prerender.NodeQueueSize, coords)
+	coordinator := newCoordinator(slavesAddrs, requestTimeout, cfg.Prerender.NodeQueueSize, coords)
 	coords = nil
 	resChan := coordinator.Start()
 

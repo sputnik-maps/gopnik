@@ -15,6 +15,7 @@ import (
 
 type connection struct {
 	addr             string
+	timeout          time.Duration
 	transportFactory thrift.TTransportFactory
 	protocolFactory  thrift.TProtocolFactory
 	socket           *thrift.TSocket
@@ -22,9 +23,10 @@ type connection struct {
 	renderClient     *gopnikrpc.RenderClient
 }
 
-func newConnection(addr string) *connection {
+func newConnection(addr string, timeout time.Duration) *connection {
 	return &connection{
-		addr: addr,
+		addr:    addr,
+		timeout: timeout,
 	}
 }
 
@@ -35,7 +37,7 @@ func (self *connection) Connect() error {
 	var err error
 	self.transportFactory = thrift.NewTFramedTransportFactory(thrift.NewTTransportFactory())
 	self.protocolFactory = thrift.NewTBinaryProtocolFactoryDefault()
-	self.socket, err = thrift.NewTSocket(self.addr)
+	self.socket, err = thrift.NewTSocketTimeout(self.addr, self.timeout)
 	if err != nil {
 		return fmt.Errorf("socket error: %v", err.Error())
 	}
