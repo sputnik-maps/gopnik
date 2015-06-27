@@ -27,6 +27,10 @@ type thriftConn struct {
 	Client    *gopnikrpc.RenderClient
 }
 
+func (self *thriftConn) IsOpen() bool {
+	return self.Transport.IsOpen()
+}
+
 func (self *thriftConn) Close() {
 	self.Transport.Close()
 }
@@ -212,6 +216,7 @@ func (self *RenderSelector) ping(i int) int {
 	status, err := conn.Client.Status()
 
 	if err != nil || !status {
+		conn.Close()
 		return Offline
 	}
 
@@ -249,6 +254,10 @@ func (self *RenderSelector) SelectRender(coord gopnik.TileCoord) (*thriftConn, e
 }
 
 func (self *RenderSelector) FreeConnection(conn *thriftConn) {
+	if !conn.IsOpen() {
+		return
+	}
+
 	for _, rp := range self.renders {
 		if rp.Addr == conn.Addr {
 			rp.Mu.Lock()

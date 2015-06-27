@@ -5,6 +5,8 @@ import (
 	"sync"
 	"time"
 
+	"git.apache.org/thrift.git/lib/go/thrift"
+
 	"gopnik"
 	"gopnikrpc"
 	"gopnikrpcutils"
@@ -45,9 +47,12 @@ func (self *TileRouter) UpdateRenders(renders []string) {
 	self.selector = selector
 }
 
-func (self *TileRouter) getTile(conn *gopnikrpc.RenderClient, coord gopnik.TileCoord) (img []byte, err error) {
-	resp, err := conn.Render(gopnikrpcutils.CoordToRPC(&coord), gopnikrpc.Priority_HIGH, false)
+func (self *TileRouter) getTile(conn *thriftConn, coord gopnik.TileCoord) (img []byte, err error) {
+	resp, err := conn.Client.Render(gopnikrpcutils.CoordToRPC(&coord), gopnikrpc.Priority_HIGH, false)
 	if err != nil {
+		if _, ok := err.(thrift.TTransportException); ok {
+			conn.Close()
+		}
 		return nil, err
 	}
 
@@ -67,7 +72,7 @@ func (self *TileRouter) Tile(coord gopnik.TileCoord) (img []byte, err error) {
 			time.Sleep(10 * time.Second)
 			continue
 		}
-		img, err = self.getTile(conn.Client, coord)
+		img, err = self.getTile(conn, coord)
 		self.selector.FreeConnection(conn)
 		if err == nil {
 			return
