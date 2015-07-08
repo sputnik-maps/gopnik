@@ -107,11 +107,12 @@ func (self *coordinator) connLoop(addr string) {
 			return
 		}
 		if _, ok := err.(*gopnikrpc.QueueLimitExceeded); ok {
-			return
+			log.Error("%v on %v", err, addr)
+			time.Sleep(1 * time.Minute)
+		} else {
+			log.Error("Slave connection error: %v", err)
+			time.Sleep(10 * time.Second)
 		}
-
-		log.Error("Slave connection error: %v", err)
-		time.Sleep(10 * time.Second)
 	}
 }
 

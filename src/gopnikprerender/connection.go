@@ -79,8 +79,15 @@ func (self *connection) ProcessTask(coord gopnik.TileCoord) (*perflog.PerfLogEnt
 		if err == nil {
 			return res, nil
 		}
+		var tmpErr error
 		if e, ok := err.(*net.OpError); ok && e.Temporary() {
-			log.Debug("Connection to %v temorary fail. Reconnecting...", self.addr)
+			tmpErr = e
+		}
+		if ex, ok := err.(thrift.TTransportException); ok && ex.TypeId() == thrift.TIMED_OUT {
+			tmpErr = ex
+		}
+		if tmpErr != nil {
+			log.Info("Connection to %v temorary fail (%v). Reconnecting...", self.addr, tmpErr)
 			self.Close()
 			err2 := self.Connect()
 			if err2 != nil {
