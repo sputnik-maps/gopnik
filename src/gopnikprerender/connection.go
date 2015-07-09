@@ -93,7 +93,8 @@ func (self *connection) ProcessTask(coord gopnik.TileCoord) (*perflog.PerfLogEnt
 			if err2 != nil {
 				return nil, err2
 			}
+		} else {
+			return nil, err
 		}
-		return nil, err
 	}
 }

@@ -103,15 +103,17 @@ func (self *coordinator) connLoop(addr string) {
 	// Process tasks
 	for {
 		err := self.connF(addr)
-		if _, ok := err.(*stop); ok {
-			return
-		}
-		if _, ok := err.(*gopnikrpc.QueueLimitExceeded); ok {
-			log.Error("%v on %v", err, addr)
-			time.Sleep(1 * time.Minute)
-		} else {
-			log.Error("Slave connection error: %v", err)
-			time.Sleep(10 * time.Second)
+		if err != nil {
+			if _, ok := err.(*stop); ok {
+				return
+			}
+			if _, ok := err.(*gopnikrpc.QueueLimitExceeded); ok {
+				log.Error("%v on %v", err, addr)
+				time.Sleep(1 * time.Minute)
+			} else {
+				log.Error("Slave connection error: %v", err)
+				time.Sleep(10 * time.Second)
+			}
 		}
 	}
 }
