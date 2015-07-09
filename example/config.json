@@ -12,13 +12,17 @@
 			"Options": {
 				"Color": true
 			}
+		},
+		"ClusterPlugin": {
+			"Plugin":       "ClusterConfigPlugin",
+			"PluginConfig": {
+				"Nodes":    ["localhost:8090"]
+			}
 		}
 	},
 	"Render": {
 		"Addr":             ":8090",
 		"DebugAddr":        ":9090",
-		"HTTPReadTimeout":  "300s",
-		"HTTPWriteTimeout": "300s",
 		"Logging": {
 			"Backend": "Console",
 			"Level":   "Debug",
@@ -56,12 +60,7 @@
 	},
 	"MetaSize":         8,
 	"TileSize":         256,
-	"ClusterPlugin": {
-		"Plugin":       "ClusterConfigPlugin",
-		"PluginConfig": {
-			"Nodes":    ["localhost:8090"]
-		}
-	},
+
 	"CachePlugin": {
 					"Plugin": "SimpleFileCachePlugin",
 					"PluginConfig": {
@@ -70,11 +69,12 @@
 	},
 	"RenderPools": [
 		{
-			"Cmd": ["./bin/gopnikslave", "-stylesheet", "sampledata/stylesheet.xml", "-pluginsPath", "/usr/lib/mapnik/2.2/input"],
+			"Cmd": ["./gopnikslave", "-stylesheet", "../gopnik/sampledata/stylesheet.xml", "-pluginsPath", "/usr/lib/mapnik/2.2/input"],
 			"MinZoom":          1,
 			"MaxZoom":          8,
 			"PoolSize":         1,
-			"QueueSize":        100,
+			"HPQueueSize":      100,
+			"LPQueueSize":      100,
 			"RenderTTL":        10
 		}
 	]
