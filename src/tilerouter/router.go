@@ -73,8 +73,8 @@ func (self *TileRouter) Tile(coord gopnik.TileCoord) (img []byte, err error) {
 			continue
 		}
 		img, err = self.getTile(conn, coord)
-		self.selector.FreeConnection(conn)
 		if err == nil {
+			self.selector.FreeConnection(conn)
 			return
 		}
 	}

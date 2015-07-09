@@ -194,32 +194,27 @@ func (self *RenderSelector) cleanConnection(rp *renderPoint) {
 	rp.Mu.Lock()
 	defer rp.Mu.Unlock()
 
-	connLen := rp.Connections.Len()
-	if connLen > rp.MinFreeConns {
-		N := connLen - rp.MinFreeConns
-		if N > connLen/2 {
-			N = connLen / 2
-		}
-		for i := 0; i < N; i++ {
-			rp.Connections.Remove(rp.Connections.Front())
-		}
+	N := rp.MinFreeConns/2
+	for i := 0; i < N; i++ {
+		rp.Connections.Remove(rp.Connections.Front())
 	}
 }
 
 func (self *RenderSelector) ping(i int) int {
 	conn, err := self.getConnection(&self.renders[i])
 	if err != nil {
+		log.Debug("ping error %v", err)
 		return Offline
 	}
-	defer self.FreeConnection(conn)
 
 	status, err := conn.Client.Status()
-
 	if err != nil || !status {
 		conn.Close()
+		log.Debug("status error %v, %v", err, status)
 		return Offline
 	}
 
+	self.FreeConnection(conn)
 	return Online
 }
 
