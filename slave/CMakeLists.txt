@@ -2,7 +2,9 @@ cmake_minimum_required(VERSION 2.8)
 
 project(gopnikslave C CXX)
 
-cmake_policy(SET CMP0037 OLD)
+if (${CMAKE_MAJOR_VERSION} GREATER 2)
+	cmake_policy(SET CMP0037 OLD)
+endif()
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
