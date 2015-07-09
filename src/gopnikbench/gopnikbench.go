@@ -104,11 +104,18 @@ func main() {
 	}
 
 	var slaveCmd []string
+	var executionTimeout time.Duration
 	for _, rCfg := range cfg.RenderPools {
 		if *zoom < uint64(rCfg.MinZoom) || *zoom > uint64(rCfg.MaxZoom) {
 			continue
 		}
 		slaveCmd = rCfg.Cmd
+		timeoutStr := rCfg.ExecutionTimeout
+		var err error
+		executionTimeout, err = time.ParseDuration(timeoutStr)
+		if err != nil {
+			log.Fatalf("Invalid execution timeout: %v", err)
+		}
 	}
 	if slaveCmd == nil {
 		log.Fatalf("Render configuration for zoom %v not found", *zoom)
@@ -120,7 +127,7 @@ func main() {
 		metaCoords[i].Tags = tags
 	}
 
-	render, err := tilerender.NewTileRender(slaveCmd)
+	render, err := tilerender.NewTileRender(slaveCmd, executionTimeout)
 	if err != nil {
 		log.Fatalf("NewTileRender error: %v", err)
 	}

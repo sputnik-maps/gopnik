@@ -110,6 +110,7 @@ func TestErrorRaising(t *testing.T) {
 				HPQueueSize: 10,
 				LPQueueSize: 10,
 				RenderTTL:   0,
+				ExecutionTimeout: "60s",
 			},
 		},
 	}

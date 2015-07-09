@@ -21,26 +21,28 @@ type RenderPoolResponse struct {
 }
 
 type RenderPool struct {
-	hpTasks *renderQueue
-	lpTasks *renderQueue
-	cmd     []string
-	ttl     uint
-	renders []*renderWrapper
+	hpTasks 		 *renderQueue
+	lpTasks 		 *renderQueue
+	cmd   			 []string
+	ttl  			 uint
+	renders			 []*renderWrapper
+	executionTimeout time.Duration
 }
 
-func NewRenderPool(cmd []string, poolSize, hpQueueSize, lpQueueSize, ttl uint) (*RenderPool, error) {
+func NewRenderPool(cmd []string, poolSize, hpQueueSize, lpQueueSize, ttl uint, executionTimeout time.Duration) (*RenderPool, error) {
 	self := &RenderPool{}
 	self.cmd = cmd
 	self.hpTasks = newRenderQueue(hpQueueSize)
 	self.lpTasks = newRenderQueue(lpQueueSize)
 	self.renders = make([]*renderWrapper, poolSize)
 	self.ttl = ttl
+	self.executionTimeout = executionTimeout
 
 	errCh := make(chan error, poolSize)
 	for i, _ := range self.renders {
 		go func(k int) {
 			var err error
-			self.renders[k], err = newRenderWrapper(self.hpTasks, self.lpTasks, self.cmd, self.ttl)
+			self.renders[k], err = newRenderWrapper(self.hpTasks, self.lpTasks, self.cmd, self.ttl, self.executionTimeout)
 			errCh <- err
 		}(i)
 	}
@@ -108,7 +110,7 @@ func (self *RenderPool) Resize(newPoolSize int) {
 	}
 	for newPoolSize > len(self.renders) {
 		for {
-			render, err := newRenderWrapper(self.hpTasks, self.lpTasks, self.cmd, self.ttl)
+			render, err := newRenderWrapper(self.hpTasks, self.lpTasks, self.cmd, self.ttl, self.executionTimeout)
 			if err != nil {
 				log.Error("Failed to create render: %v", err)
 			} else {

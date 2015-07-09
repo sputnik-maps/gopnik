@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
+	"time"
 
 	"github.com/golang/protobuf/proto"
 
@@ -17,10 +18,11 @@ var FontPath string
 
 // Renders images as Web Mercator tiles
 type TileRender struct {
-	command []string
-	cmd     *exec.Cmd
-	writer  io.Writer
-	reader  io.Reader
+	command 		 []string
+	cmd     		 *exec.Cmd
+	writer  		 io.Writer
+	reader  		 io.Reader
+	executionTimeout time.Duration
 }
 
 func (t *TileRender) childLogger(cmdStderr io.Reader) {
@@ -34,9 +36,10 @@ func (t *TileRender) childLogger(cmdStderr io.Reader) {
 	}
 }
 
-func NewTileRender(cmd []string) (*TileRender, error) {
+func NewTileRender(cmd []string, timeout time.Duration) (*TileRender, error) {
 	t := &TileRender{
 		command: cmd,
+		executionTimeout: timeout,
 	}
 
 	err := t.createSubProc()
@@ -128,7 +131,25 @@ func (t *TileRender) RenderTiles(c gopnik.TileCoord) ([]gopnik.Tile, error) {
 		return nil, err
 	}
 
+	ch := make(chan struct{})
+	if t.executionTimeout > 0 {
+		go func() {
+			select {
+			case <-time.After(t.executionTimeout):
+				log.Debug("timeout stoping worker...")
+				t.Stop()
+				<- ch
+			case <-ch:
+				return
+			}
+		}()
+		defer func(){
+			ch <- struct{}{}
+		}()
+	}
+
 	tiles, err := t.readAnswer()
+
 	if err != nil {
 		t.Stop()
 		return nil, err

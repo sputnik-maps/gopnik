@@ -59,6 +59,8 @@ const MapnikInputPlugins = "`mapnik-config --input-plugins`"
 var SlaveCmd = []string{"`pwd`/bin/gopnikslave",
 		"-stylesheet", Stylesheet,
 		"-pluginsPath", MapnikInputPlugins}
+var SleepSlaveCmd = []string{"`pwd`/bin/gopniktestslave",
+		"-sleep", "60"}
 EOF
 
 echo "${bold}${magenta}Configuring plugins...${normal}"

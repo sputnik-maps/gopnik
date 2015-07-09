@@ -3,6 +3,7 @@ package tilerender
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -11,8 +12,10 @@ import (
 	"sampledata"
 )
 
+var executionTimeout time.Duration =  60 * time.Second
+
 func TestOneRender(t *testing.T) {
-	rpool, err := NewRenderPool(sampledata.SlaveCmd, 1, 1, 1, 0)
+	rpool, err := NewRenderPool(sampledata.SlaveCmd, 1, 1, 1, 0, executionTimeout)
 	require.Nil(t, err)
 
 	coord := gopnik.TileCoord{
@@ -33,7 +36,7 @@ func TestOneRender(t *testing.T) {
 func Test5RendersHP(t *testing.T) {
 	const nTiles = 15
 
-	rpool, err := NewRenderPool(sampledata.SlaveCmd, 5, nTiles, 0, 0)
+	rpool, err := NewRenderPool(sampledata.SlaveCmd, 5, nTiles, 0, 0, executionTimeout)
 	require.Nil(t, err)
 
 	coord := gopnik.TileCoord{
@@ -58,7 +61,7 @@ func Test5RendersHP(t *testing.T) {
 func Test5RendersLP(t *testing.T) {
 	const nTiles = 15
 
-	rpool, err := NewRenderPool(sampledata.SlaveCmd, 5, 0, nTiles, 0)
+	rpool, err := NewRenderPool(sampledata.SlaveCmd, 5, 0, nTiles, 0, executionTimeout)
 	require.Nil(t, err)
 
 	coord := gopnik.TileCoord{
@@ -81,7 +84,7 @@ func Test5RendersLP(t *testing.T) {
 }
 
 func TestTTL(t *testing.T) {
-	rpool, err := NewRenderPool(sampledata.SlaveCmd, 1, 4, 0, 2)
+	rpool, err := NewRenderPool(sampledata.SlaveCmd, 1, 4, 0, 2, executionTimeout)
 	require.Nil(t, err)
 
 	ansCh := make(chan *RenderPoolResponse)
@@ -105,7 +108,7 @@ func TestTTL(t *testing.T) {
 }
 
 func TestOneRender4Tiles(t *testing.T) {
-	rpool, err := NewRenderPool(sampledata.SlaveCmd, 1, 1, 0, 0)
+	rpool, err := NewRenderPool(sampledata.SlaveCmd, 1, 1, 0, 0, executionTimeout)
 	require.Nil(t, err)
 
 	coord := gopnik.TileCoord{
@@ -129,7 +132,7 @@ func TestOneRender4Tiles(t *testing.T) {
 }
 
 func Benchmark5Renders(b *testing.B) {
-	rpool, err := NewRenderPool(sampledata.SlaveCmd, 5, uint(b.N), 0, 0)
+	rpool, err := NewRenderPool(sampledata.SlaveCmd, 5, uint(b.N), 0, 0, executionTimeout)
 	if err != nil {
 		b.Errorf("NewRenderPool error: %v", err)
 	}

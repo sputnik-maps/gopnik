@@ -3,6 +3,7 @@ package tilerender
 import (
 	"fmt"
 	"reflect"
+	"time"
 
 	"app"
 	"gopnik"
@@ -48,10 +49,18 @@ func NewMultiRenderPool(poolsCfg app.RenderPoolsConfig) (*MultiRenderPool, error
 		self.renders[i].MinZoom = poolsCfg.RenderPools[i].MinZoom
 		self.renders[i].MaxZoom = poolsCfg.RenderPools[i].MaxZoom
 		self.renders[i].Tags = poolsCfg.RenderPools[i].Tags
+		var executionTimeout time.Duration
+		if poolsCfg.RenderPools[i].ExecutionTimeout != "" {
+			executionTimeout, err = time.ParseDuration(poolsCfg.RenderPools[i].ExecutionTimeout)
+			if err != nil {
+				log.Fatalf("Invalid execution timeout: %v", err)
+				return nil, err
+			}
+		}
 		self.renders[i].Render, err = NewRenderPool(
 			poolsCfg.RenderPools[i].Cmd, poolsCfg.RenderPools[i].PoolSize,
 			poolsCfg.RenderPools[i].HPQueueSize, poolsCfg.RenderPools[i].LPQueueSize,
-			poolsCfg.RenderPools[i].RenderTTL)
+			poolsCfg.RenderPools[i].RenderTTL, executionTimeout)
 		if err != nil {
 			return nil, err
 		}

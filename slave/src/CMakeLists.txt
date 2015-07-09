@@ -21,3 +21,15 @@ target_link_libraries(gopnikslave
 )
 
 install(TARGETS gopnikslave DESTINATION ${PROJECT_SOURCE_DIR}/../bin)
+
+add_executable(gopniktestslave
+	test_main.cpp
+	test_render_impl.cpp
+)
+add_dependencies(gopniktestslave gopnikslave_lib)
+target_link_libraries(gopniktestslave
+	gopnikslave_lib
+	${GFLAGS_LIBRARIES}
+)
+
+install(TARGETS gopniktestslave DESTINATION ${PROJECT_SOURCE_DIR}/../bin)

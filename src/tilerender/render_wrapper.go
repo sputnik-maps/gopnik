@@ -15,25 +15,27 @@ var hhpQueueElems = hmetrics2.MustRegisterPackageMetric("hp_queue_elems", hmetri
 var hlpQueueElems = hmetrics2.MustRegisterPackageMetric("lp_queue_elems", hmetrics2.NewHistogram()).(*hmetrics2.Histogram)
 
 type renderWrapper struct {
-	render  *TileRender
-	hpTasks *renderQueue
-	lpTasks *renderQueue
-	cmd     []string
-	ttl     uint
-	ttlMu   sync.Mutex
-	stop    chan int
+	render  		 *TileRender
+	hpTasks 		 *renderQueue
+	lpTasks 		 *renderQueue
+	cmd     		 []string
+	ttl     		 uint
+	ttlMu   		 sync.Mutex
+	stop    	   	 chan int
+	executionTimeout time.Duration
 }
 
-func newRenderWrapper(hpTasks, lpTasks *renderQueue, cmd []string, ttl uint) (*renderWrapper, error) {
+func newRenderWrapper(hpTasks, lpTasks *renderQueue, cmd []string, ttl uint, executionTimeout time.Duration) (*renderWrapper, error) {
 	self := new(renderWrapper)
 	self.hpTasks = hpTasks
 	self.lpTasks = lpTasks
 	self.cmd = cmd
 	self.ttl = ttl
 	self.stop = make(chan int)
+	self.executionTimeout = executionTimeout
 
 	var err error
-	self.render, err = NewTileRender(self.cmd)
+	self.render, err = NewTileRender(self.cmd, self.executionTimeout)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +109,7 @@ func (self *renderWrapper) killRender(restart bool) {
 
 func (self *renderWrapper) startRender() {
 	for self.render == nil {
-		render, err := NewTileRender(self.cmd)
+		render, err := NewTileRender(self.cmd, self.executionTimeout)
 		if err != nil {
 			log.Error("Failed to create render: %v")
 			time.Sleep(5 * time.Second)
