@@ -128,6 +128,13 @@ func runWebUI(addr string, p *coordinator, cache gopnik.CachePluginInterface) {
 			log.Error("%v", err)
 			return nil
 		}
+		if res == nil {
+			res, err = gopnikwebstatic.Asset("img/notile.png")
+			if err != nil {
+				log.Error("%v", err)
+				return nil
+			}
+		}
 		return res
 	})
 
