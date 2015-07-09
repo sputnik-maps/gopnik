@@ -20,3 +20,8 @@
 
 *.sublime-workspace
 *.swp
+/.idea/
+/gopnik.iml
+/slave/vendor/gtest-1.7.0.zip
+/slave/vendor/v1.0.5.tar.gz
+
