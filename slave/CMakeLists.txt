@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 2.8)
 
 project(gopnikslave C CXX)
 
+cmake_policy(SET CMP0037 OLD)
+
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 OPTION(TESTS "enable_testing" ON)
