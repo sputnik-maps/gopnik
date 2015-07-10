@@ -14,11 +14,16 @@
 #include <mapnik/datasource_cache.hpp>
 #include <mapnik/agg_renderer.hpp>
 #include <mapnik/load_map.hpp>
+#if MAPNIK_VERSION < 300000
 #include <mapnik/graphics.hpp>
+#else
+#include <mapnik/image_view.hpp>
+#endif
 #include <mapnik/image_util.hpp>
 #include <mapnik/box2d.hpp>
 
 #include <proj_api.h>
+
 
 BOOST_STATIC_ASSERT(MAPNIK_VERSION >= 200200);
 
@@ -26,8 +31,10 @@ namespace gopnik {
 
 #if MAPNIK_VERSION < 300000
 using image_data_32 = mapnik::image_data_32;
+using image_32 = mapnik::image_32;
 #else
-using image_data_32 = mapnik::image_data_rgba8;
+using image_data_32 = mapnik::image_rgba8;
+using image_32 = mapnik::image_rgba8;
 #endif
 
 class x_pj_free {
@@ -153,18 +160,25 @@ RenderImpl::Do(Task const &task) {
 	}
 
 	// Render map
-	mapnik::image_32 buf(pimpl_->map_->width(), pimpl_->map_->height());
-	mapnik::agg_renderer<mapnik::image_32> ren(*pimpl_->map_, buf, pimpl_->scale_factor_);
+	image_32 buf(pimpl_->map_->width(), pimpl_->map_->height());
+	mapnik::agg_renderer<image_32> ren(*pimpl_->map_, buf, pimpl_->scale_factor_);
 	ren.apply();
 
 	// Split the meta tile into an NxN grid of tiles
 	unsigned x, y;
 	for (y = 0; y < task.size(); ++y) {
 		for (x = 0; x < task.size(); ++x) {
+#if MAPNIK_VERSION < 300000
 			mapnik::image_view<image_data_32> vw{
 					x * pimpl_->tile_size_, y * pimpl_->tile_size_,
 					pimpl_->tile_size_, pimpl_->tile_size_,
 					buf.data()};
+#else
+			mapnik::image_view<image_data_32> vw{
+					x * pimpl_->tile_size_, y * pimpl_->tile_size_,
+					pimpl_->tile_size_, pimpl_->tile_size_,
+					buf};
+#endif
 			pimpl_->appendTile(res, vw);
 		}
 	}
@@ -190,7 +204,11 @@ RenderImpl::impl::analyzeTile(Tile *tile, mapnik::image_view<image_data_32> vw) 
 	unsigned x, y;
 	image_data_32::pixel_type prev_pixel;
 	for (y = 0; y < vw.height(); ++y) {
+#if MAPNIK_VERSION < 300000
 		image_data_32::pixel_type const *row = vw.getRow(y);
+#else
+		image_data_32::pixel_type const *row = vw.get_row(y);
+#endif
 		for (x = 0; x < vw.width(); ++x) {
 			image_data_32::pixel_type pixel = row[x];
 			if(x > 0 && y > 0 && pixel != prev_pixel) {
