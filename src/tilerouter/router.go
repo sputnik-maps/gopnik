@@ -67,14 +67,19 @@ func (self *TileRouter) Tile(coord gopnik.TileCoord) (img []byte, err error) {
 	for i := 0; i < ATTEMPTS; i++ {
 		var conn *thriftConn
 		conn, err = self.selector.SelectRender(coord)
+		if err != nil {
+			log.Error("render selector error: %v", err)
+			time.Sleep(10 * time.Second)
+			continue
+		}
 		if conn == nil {
 			img, err = nil, fmt.Errorf("No available renders")
 			time.Sleep(10 * time.Second)
 			continue
 		}
 		img, err = self.getTile(conn, coord)
+		self.selector.FreeConnection(conn)
 		if err == nil {
-			self.selector.FreeConnection(conn)
 			return
 		}
 	}
