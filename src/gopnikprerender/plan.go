@@ -42,6 +42,18 @@ func (self *plan) DoneTasks() int {
 	return self.countTasks(DONE)
 }
 
+func (self *plan) ProgressTasksCoord() (coordInProg []gopnik.TileCoord) {
+	self.mu.Lock()
+	defer self.mu.Unlock()
+
+	for i, v := range self.status {
+		if v == INPROGRESS {
+			coordInProg = append(coordInProg, self.bboxes[i])
+		}
+	}
+	return
+}
+
 func (self *plan) countTasks(status uint8) int {
 	result := 0
 	for _, s := range self.status {

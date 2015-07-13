@@ -138,6 +138,19 @@ func runWebUI(addr string, p *coordinator, cache gopnik.CachePluginInterface) {
 		return res
 	})
 
+	m.Get("/progressTasksCoord", func(r rendergold.Render) {
+		progressTasksCoord := p.ProgressTasksCoord()
+
+		r.HTML(
+			http.StatusOK,
+			"coordinates",
+			map[string]interface{}{
+				"Page": "In Progress",
+				"ProgressTasksCoord":     progressTasksCoord,
+			},
+		)
+	})
+
 	log.Info("Starting WebUI on %v", addr)
 	log.Fatal(http.ListenAndServe(addr, m))
 }

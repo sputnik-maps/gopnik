@@ -1,0 +1,8 @@
+extends ./base
+
+block content
+	h1 {{.Page}}
+	ul
+		{{range .ProgressTasksCoord}}
+			li {{.X}} {{.Y}} {{.Zoom}} {{.Tags}}
+		{{end}}

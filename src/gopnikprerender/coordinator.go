@@ -50,11 +50,11 @@ func newCoordinator(addrs []string, timeout time.Duration, nodeQueueSize int, bb
 
 func (self *coordinator) connF(addr string) error {
 	conn := newConnection(addr, self.timeout)
-	defer conn.Close()
 	err := conn.Connect()
 	if err != nil {
 		return err
 	}
+	defer conn.Close()
 
 	for {
 		coord := self.tasks.GetTask()
@@ -76,10 +76,10 @@ func (self *coordinator) connF(addr string) error {
 func (self *coordinator) monitorConnF(addr string, t time.Time) error {
 	conn := newConnection(addr, self.timeout)
 	err := conn.Connect()
-	defer conn.Close()
 	if err != nil {
 		return err
 	}
+	defer conn.Close()
 
 	client := conn.Client()
 	data, err := client.Stat()
@@ -170,5 +170,10 @@ func (self *coordinator) NodeMonitor(node string) *monitor {
 func (self *coordinator) DoneTasks() (done int, total int) {
 	done = self.tasks.DoneTasks()
 	total = self.tasks.TotalTasks()
+	return
+}
+
+func (self *coordinator) ProgressTasksCoord() (coordInProg []gopnik.TileCoord) {
+	coordInProg = self.tasks.ProgressTasksCoord()
 	return
 }

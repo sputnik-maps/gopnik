@@ -136,7 +136,7 @@ func (t *TileRender) RenderTiles(c gopnik.TileCoord) ([]gopnik.Tile, error) {
 		go func() {
 			select {
 			case <-time.After(t.executionTimeout):
-				log.Debug("timeout stoping worker...")
+				log.Debug("Stopping worker by timeout. TileCoord: %v", c)
 				t.Stop()
 				<- ch
 			case <-ch:

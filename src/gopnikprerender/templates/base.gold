@@ -39,5 +39,12 @@ html
 							li
 								a href="/nodes" Nodes
 						{{end}}
+						{{if eq .Page "InProgress"}}
+							li.active
+								a href="/progressTasksCoord" InProgress
+						{{else}}
+							li
+								a href="/progressTasksCoord" InProgress
+						{{end}}
 		.container-fluid.content-container
 			block content

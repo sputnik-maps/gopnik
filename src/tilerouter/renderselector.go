@@ -169,6 +169,9 @@ func (self *RenderSelector) checkConnectionCache(rp *renderPoint) (conn *thriftC
 
 	if rp.Connections.Len() > 0 {
 		elem := rp.Connections.Front()
+		if elem.Value == nil {
+			log.Debug("Nil detected in coonection slice! Slice size: %v", rp.Connections.Len())
+		}
 		conn = elem.Value.(*thriftConn)
 		rp.Connections.Remove(elem)
 		connLen := rp.Connections.Len()
@@ -249,6 +252,9 @@ func (self *RenderSelector) SelectRender(coord gopnik.TileCoord) (*thriftConn, e
 }
 
 func (self *RenderSelector) FreeConnection(conn *thriftConn) {
+	if conn == nil {
+		panic("Connection is nil")
+	}
 	if !conn.IsOpen() {
 		return
 	}
