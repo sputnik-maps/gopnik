@@ -23,6 +23,7 @@ var planFile = flag.String("plan", "", "JSON plan file (see gopnikprerenderimpor
 var zoom = flag.String("zoom", "", "Zoom to render. Format: 1-9,14,16")
 
 var csvFile = flag.String("csv", "", "CSV file with bboxes")
+var urlsFile = flag.String("urls", "", "file with urls")
 
 var latMin = flag.Float64("latMin", 0.0, "min latitude")
 var lonMin = flag.Float64("lonMin", 0.0, "min longitude")
@@ -144,16 +145,6 @@ func main() {
 
 	app.App.Configure("Prerender", &cfg)
 
-	zooms, err := parseZoom(*zoom)
-	if err != nil {
-		log.Fatalf("Invalid zoom: %v", err)
-	}
-
-	var tags []string
-	if *tagsF != "" {
-		tags = strings.Split(*tagsF, ",")
-	}
-
 	var coords []gopnik.TileCoord
 
 	if *doAppend {
@@ -171,42 +162,60 @@ func main() {
 		}
 	}
 
-	if *allWorld {
-		for _, zoom := range zooms {
-			bbox := [4]float64{-85 /*latMin*/, 85 /*latMax*/, -180 /*lonMin*/, 180 /*lonMax*/}
-			zoomCoords, err := genCoords(bbox, zoom)
-			if err != nil {
-				log.Fatal(err)
-			}
-			// append tags
-			for i := 0; i < len(zoomCoords); i++ {
-				zoomCoords[i].Tags = tags
-			}
-			coords = append(coords, zoomCoords...)
+	if *urlsFile != "" {
+		urlsCoords, err := readUrlsFile(*urlsFile)
+		if err != nil {
+			log.Fatal(err)
 		}
+		coords = append(coords, urlsCoords...)
 	} else {
-		if *csvFile != "" {
-			csvCoords, err := readCSVFile(*csvFile, zooms)
-			if err != nil {
-				log.Fatal(err)
-			}
-			// append tags
-			for i := 0; i < len(csvCoords); i++ {
-				csvCoords[i].Tags = tags
-			}
-			coords = append(coords, csvCoords...)
+		zooms, err := parseZoom(*zoom)
+		if err != nil {
+			log.Fatalf("Invalid zoom: %v", err)
 		}
 
-		for _, zoom := range zooms {
-			flagCoords, err := latLon(zoom)
-			if err != nil {
-				log.Fatal(err)
+		var tags []string
+		if *tagsF != "" {
+			tags = strings.Split(*tagsF, ",")
+		}
+
+		if *allWorld {
+			for _, zoom := range zooms {
+				bbox := [4]float64{-85 /*latMin*/, 85 /*latMax*/, -180 /*lonMin*/, 180 /*lonMax*/}
+				zoomCoords, err := genCoords(bbox, zoom)
+				if err != nil {
+					log.Fatal(err)
+				}
+				// append tags
+				for i := 0; i < len(zoomCoords); i++ {
+					zoomCoords[i].Tags = tags
+				}
+				coords = append(coords, zoomCoords...)
 			}
-			// append tags
-			for i := 0; i < len(flagCoords); i++ {
-				flagCoords[i].Tags = tags
+		} else {
+			if *csvFile != "" {
+				csvCoords, err := readCSVFile(*csvFile, zooms)
+				if err != nil {
+					log.Fatal(err)
+				}
+				// append tags
+				for i := 0; i < len(csvCoords); i++ {
+					csvCoords[i].Tags = tags
+				}
+				coords = append(coords, csvCoords...)
 			}
-			coords = append(coords, flagCoords...)
+
+			for _, zoom := range zooms {
+				flagCoords, err := latLon(zoom)
+				if err != nil {
+					log.Fatal(err)
+				}
+				// append tags
+				for i := 0; i < len(flagCoords); i++ {
+					flagCoords[i].Tags = tags
+				}
+				coords = append(coords, flagCoords...)
+			}
 		}
 	}
 
