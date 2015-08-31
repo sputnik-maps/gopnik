@@ -111,7 +111,7 @@ func (self *plan) setStatus(coord gopnik.TileCoord, status uint8) error {
 	for i, c := range self.bboxes {
 		if coord.Equals(&c) {
 			self.status[i] = status
-			self.cond.Broadcast()
+			self.cond.Signal()
 			return nil
 		}
 	}
