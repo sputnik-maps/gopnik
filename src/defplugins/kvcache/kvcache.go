@@ -180,8 +180,18 @@ func (self *KVStorePlugin) setData(coord gopnik.TileCoord, data []byte, level in
 
 func (self *KVStorePlugin) setSecondLevelData(coord gopnik.TileCoord, tiles []gopnik.Tile) error {
 	buf := bytes.NewBuffer(nil)
-	for _, elem := range tiles {
+	for i, elem := range tiles {
 		if elem.SingleColor != nil {
+			//trying to remove old tile on first level
+			coordToDelete := gopnik.TileCoord{
+				X: coord.X + uint64(i)%coord.Size,
+				Y: coord.Y + uint64(i)/coord.Size,
+				Zoom: coord.Zoom,
+				Size: 1,
+				Tags: coord.Tags,
+			}
+			self.Delete(coordToDelete, 1)
+
 			r, g, b, _ := elem.SingleColor.RGBA()
 			col := u8Color{uint8(r), uint8(g), uint8(b)}
 			err := binary.Write(buf, binary.BigEndian, &col)
@@ -200,7 +210,6 @@ func (self *KVStorePlugin) setSecondLevelData(coord gopnik.TileCoord, tiles []go
 
 func (self *KVStorePlugin) Set(coord gopnik.TileCoord, tiles []gopnik.Tile) error {
 	var err error
-
 	c := coord
 	c.Size = 1
 
@@ -233,6 +242,18 @@ func (self *KVStorePlugin) Set(coord gopnik.TileCoord, tiles []gopnik.Tile) erro
 }
 
 type KVStorePluginFactory struct {
+}
+
+func (self *KVStorePlugin) Delete(coord gopnik.TileCoord, level int) error {
+	tileKey := self.key(coord, level)
+	log.Debug("Trying to delete second level tile with key: %v ...", tileKey)
+	err := self.store.Delete(tileKey)
+	if err != nil {
+		log.Debug("Error while deleting tile: %v", err)
+		return err
+	}
+	log.Debug("Tile with key %v was deleted", tileKey)
+	return nil
 }
 
 func (cpf *KVStorePluginFactory) Name() string {
