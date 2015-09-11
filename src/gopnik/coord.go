@@ -8,15 +8,17 @@ type TileCoord struct {
 	Tags []string
 }
 
-func (tc *TileCoord) Equals(coord *TileCoord) bool {
-	if tc.Zoom == coord.Zoom && tc.X == coord.X && tc.Y == coord.Y && tc.Size == coord.Size && len(tc.Tags) == len(coord.Tags) {
-		for _, tag := range tc.Tags {
-			for _, tag2 := range coord.Tags {
-				if tag2 != tag {
-					return false
+func (self *TileCoord) Equals(coord *TileCoord) bool {
+	if self.Zoom == coord.Zoom && self.X == coord.X && self.Y == coord.Y && self.Size == coord.Size && len(self.Tags) == len(coord.Tags) {
+		TL:
+			for _, tag := range coord.Tags {
+				for _, tag2 := range self.Tags {
+					if tag2 == tag {
+						continue TL
+					}
 				}
+				return false
 			}
-		}
 		return true
 	} else {
 		return false

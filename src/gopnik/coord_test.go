@@ -9,12 +9,14 @@ func TestCoordEqualss(t *testing.T) {
 		X:    10,
 		Y:    7,
 		Zoom: 11,
+		Tags: []string{"Tag1", "Tag2", "Tag3"},
 	}
 
 	coord2 := &TileCoord{
 		X:    10,
 		Y:    7,
 		Zoom: 11,
+		Tags: []string{"Tag1", "Tag2", "Tag3"},
 	}
 
 	if !coord.Equals(coord2) {

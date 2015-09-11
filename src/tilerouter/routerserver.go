@@ -142,7 +142,7 @@ func (srv *RouterServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	log.Info("New request: %v", r.URL.String())
 
-	// URL format: blah-blah-blah/$z/$x/$y.png
+	// URL format: /blah-blah-blah/$z/$x/$y.png
 
 	if !strings.HasSuffix(r.URL.Path, ".png") {
 		log.Debug("Invalid tile extension: %v", r.URL.Path)
@@ -151,7 +151,7 @@ func (srv *RouterServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pathParts := strings.Split(r.URL.Path[0:len(r.URL.Path)-4], "/")
+	pathParts := strings.Split(r.URL.Path[1:len(r.URL.Path)-4], "/")
 
 	if len(pathParts) < 3 {
 		log.Debug("invalid path: %v", r.Header)
@@ -160,10 +160,36 @@ func (srv *RouterServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	z, _ := strconv.ParseUint(pathParts[len(pathParts)-3], 10, 64)
-	x, _ := strconv.ParseUint(pathParts[len(pathParts)-2], 10, 64)
-	y, _ := strconv.ParseUint(pathParts[len(pathParts)-1], 10, 64)
-	tags := r.URL.Query()["tag"]
+	var err error
+	var z, x, y uint64
+	z, err = strconv.ParseUint(pathParts[len(pathParts)-3], 10, 64)
+	if err == nil {
+		x, err = strconv.ParseUint(pathParts[len(pathParts)-2], 10, 64)
+		if err == nil {
+			y, err = strconv.ParseUint(pathParts[len(pathParts)-1], 10, 64)
+		}
+	}
+
+	if err != nil {
+		log.Debug("invalid zoom or tile coords: %v", err)
+		http.Error(w, "invalid zoom or coordinates", 400)
+		hReq400.Inc()
+		return
+	}
+
+	var tags []string
+	log.Debug("pathParts: %v", pathParts)
+	for _, tag := range pathParts[:len(pathParts)-3] {
+			tags = append(tags, tag)
+			log.Debug("tags: %v", tags)
+	}
+
+	tagsFromParams := r.URL.Query()["tag"]
+	log.Debug("tags from params: %v", tagsFromParams)
+	for _, tag := range tagsFromParams {
+		tags = append(tags, tag)
+		log.Debug("tags: %v", tags)
+	}
 
 	if srv.serveTileRequest(w, r, gopnik.TileCoord{
 		X:    x,
