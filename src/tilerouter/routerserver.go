@@ -178,17 +178,13 @@ func (srv *RouterServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var tags []string
-	log.Debug("pathParts: %v", pathParts)
 	for _, tag := range pathParts[:len(pathParts)-3] {
 			tags = append(tags, tag)
-			log.Debug("tags: %v", tags)
 	}
 
 	tagsFromParams := r.URL.Query()["tag"]
-	log.Debug("tags from params: %v", tagsFromParams)
 	for _, tag := range tagsFromParams {
 		tags = append(tags, tag)
-		log.Debug("tags: %v", tags)
 	}
 
 	if srv.serveTileRequest(w, r, gopnik.TileCoord{
