@@ -5,10 +5,12 @@ block content
 	.row
 		.col-md-10
 			.progress
-				.progress-bar role=progressbar aria-valuenow={{.Progress}} aria-valuemin=0 aria-valuemax=100 style="width: {{.Progress}}%;"
-					| {{.Progress}}%
+				.progress-bar.progress-bar-success style="width: {{.ProgressSuccess}}%;"
+					| {{.ProgressSuccess}}%
+				.progress-bar.progress-bar-danger style="width: {{.ProgressFailed}}%;"
+					| {{.ProgressFailed}}%
 		.col-md-2
-			b {{.Done}} / {{.Total}}
+			b {{.Done}} /  {{.Failed}} / {{.Total}}
 	javascript:
 		setTimeout(function(){
 			window.location.reload(1);

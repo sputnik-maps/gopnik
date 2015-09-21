@@ -11,21 +11,26 @@ const (
 	PENDING    = 0
 	INPROGRESS = 1
 	DONE       = 2
+	FAILED	   = 3
 )
 
 type plan struct {
-	bboxes []gopnik.TileCoord
-	status []uint8
-	cursor int
-	mu     sync.Mutex
-	cond   *sync.Cond
-	condMu sync.Mutex
+	bboxes 	 []gopnik.TileCoord
+	status 	 []uint8
+	cursor 	 int
+	attempts []uint8
+	mu     	 sync.Mutex
+	cond   	 *sync.Cond
+	condMu	 sync.Mutex
 }
+
+var max_attemps = (uint8)(10)
 
 func newPlan(bboxes []gopnik.TileCoord) *plan {
 	self := &plan{
 		bboxes: bboxes,
 		status: make([]uint8, len(bboxes)),
+		attempts: make([]uint8, len(bboxes)),
 	}
 	self.cond = sync.NewCond(&self.condMu)
 	return self
@@ -40,6 +45,13 @@ func (self *plan) DoneTasks() int {
 	defer self.mu.Unlock()
 
 	return self.countTasks(DONE)
+}
+
+func (self *plan) FailedTasks() int {
+	self.mu.Lock()
+	defer self.mu.Unlock()
+
+	return self.countTasks(FAILED)
 }
 
 func (self *plan) ProgressTasksCoord() (coordInProg []gopnik.TileCoord) {
@@ -77,16 +89,22 @@ func (self *plan) GetTask() *gopnik.TileCoord {
 		}
 
 		if self.status[self.cursor] == PENDING {
-			bb := self.bboxes[self.cursor]
-			self.status[self.cursor] = INPROGRESS
-			return &bb
+			if self.attempts[self.cursor] < max_attemps {
+				bb := self.bboxes[self.cursor]
+				self.status[self.cursor] = INPROGRESS
+				self.attempts[self.cursor]++
+				return &bb
+			}
+			log.Warning("Failed to process %v task after %v attempts", self.bboxes[self.cursor], max_attemps)
+			self.status[self.cursor] = FAILED
 		}
-		if self.status[self.cursor] != DONE {
+		if self.status[self.cursor] != DONE && self.status[self.cursor] != FAILED {
 			allDone = false
 		}
 
 		// On start point again
 		if self.cursor == oldCursor {
+
 			// Is plan complete?
 			if allDone {
 				return nil
@@ -111,7 +129,7 @@ func (self *plan) setStatus(coord gopnik.TileCoord, status uint8) error {
 	for i, c := range self.bboxes {
 		if coord.Equals(&c) {
 			self.status[i] = status
-			self.cond.Signal()
+			self.cond.Broadcast()
 			return nil
 		}
 	}

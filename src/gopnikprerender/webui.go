@@ -32,9 +32,9 @@ func runWebUI(addr string, p *coordinator, cache gopnik.CachePluginInterface) {
 	m.Use(rendergold.Renderer(rendergold.Options{Asset: Asset}))
 
 	m.Get("/", func(r rendergold.Render) {
-		done, total := p.DoneTasks()
+		done, failed, total := p.DoneTasks()
 		progress := float64(done) / float64(total) * 100.0
-
+		failedTasks := float64(failed) / float64(total) * 100.0
 		r.HTML(
 			http.StatusOK,
 			"status",
@@ -42,7 +42,9 @@ func runWebUI(addr string, p *coordinator, cache gopnik.CachePluginInterface) {
 				"Page":     "Status",
 				"Total":    total,
 				"Done":     done,
-				"Progress": fmt.Sprintf("%.02f", progress),
+				"Failed":     failed,
+				"ProgressSuccess": fmt.Sprintf("%.02f", progress),
+				"ProgressFailed": fmt.Sprintf("%.02f", failedTasks),
 			},
 		)
 	})

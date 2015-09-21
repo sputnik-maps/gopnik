@@ -167,8 +167,9 @@ func (self *coordinator) NodeMonitor(node string) *monitor {
 	return self.monitors[node]
 }
 
-func (self *coordinator) DoneTasks() (done int, total int) {
+func (self *coordinator) DoneTasks() (done int, failed int, total int) {
 	done = self.tasks.DoneTasks()
+	failed = self.tasks.FailedTasks()
 	total = self.tasks.TotalTasks()
 	return
 }
