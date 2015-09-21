@@ -24,6 +24,8 @@
 
 #include <proj_api.h>
 
+#include <mapnik/attribute.hpp>
+#include <mapnik/request.hpp>
 
 BOOST_STATIC_ASSERT(MAPNIK_VERSION >= 200200);
 
@@ -63,6 +65,8 @@ class RenderImpl::impl {
 		void loadFonts(std::string path);
 		void analyzeTile(Tile *tile, mapnik::image_view<image_data_32> vw);
 		void convertPoint(double &x, double &y, int zoom);
+	private:
+		bool pj_needTransform_;
 };
 
 RenderImpl::RenderImpl(std::string stylesheet, std::vector<std::string> fonts_path, std::string plugins_path, unsigned tile_size, int buffer_size, double scale_factor, std::string const& image_format)
@@ -82,13 +86,18 @@ RenderImpl::impl::impl(std::string stylesheet, std::vector<std::string> fonts_pa
 	}
 	map_.reset(new mapnik::Map{});
 	mapnik::load_map(*map_, stylesheet);
-	pj_source_.reset(pj_init_plus(mapnik::MAPNIK_GMERC_PROJ.c_str()));
-	if (!pj_source_) {
-		throw std::runtime_error("Invalid source projection");
-	}
-	pj_target_.reset(pj_init_plus(map_->srs().c_str()));
-	if (!pj_target_) {
-		throw std::runtime_error("Invalid destination projection");
+	pj_needTransform_ = false;
+	if(mapnik::MAPNIK_GMERC_PROJ != map_->srs())
+	{
+		pj_needTransform_ = true;
+		pj_source_.reset(pj_init_plus(mapnik::MAPNIK_GMERC_PROJ.c_str()));
+		if (!pj_source_) {
+			throw std::runtime_error("Invalid source projection");
+		}
+		pj_target_.reset(pj_init_plus(map_->srs().c_str()));
+		if (!pj_target_) {
+			throw std::runtime_error("Invalid destination projection");
+		}
 	}
 }
 
@@ -121,14 +130,17 @@ RenderImpl::impl::convertPoint(double &x, double &y, int zoom) {
 	static const double bound_y0 = -20037508.3428;
 	static const double bound_y1 =  20037508.3428;
 
-	x = bound_x0 + (bound_x1 - bound_x0)* ((double)x / (double)(1<<zoom));
-	y = bound_y1 - (bound_y1 - bound_y0)* ((double)y / (double)(1<<zoom));
+	x = bound_x0 + ((bound_x1 - bound_x0)/ (double)(1<<zoom))* (double)x;
+	y = bound_y1 - ((bound_y1 - bound_y0)/ (double)(1<<zoom))* (double)y;
 
-	auto err = pj_transform(pj_source_.get(), pj_target_.get(), 1, 1, &x, &y, NULL);
-	if (err) {
-		throw std::runtime_error(
-				(boost::format("pj_transform error %1%: %2%") % err % pj_strerrno(err)).str()
-			);
+	if(pj_needTransform_)
+	{
+		auto err = pj_transform(pj_source_.get(), pj_target_.get(), 1, 1, &x, &y, NULL);
+		if (err) {
+			throw std::runtime_error(
+					(boost::format("pj_transform error %1%: %2%") % err % pj_strerrno(err)).str()
+				);
+		}
 	}
 }
 

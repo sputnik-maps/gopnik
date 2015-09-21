@@ -80,3 +80,17 @@ TEST(Render, GenMetaTile) {
 	auto res = render.Do(task);
 	ASSERT_EQ(64, res->tiles_size());
 }
+
+TEST(Render, GenMetaTileZeroX) {
+	boost::filesystem::current_path(GOPNIK_SAMPLE_DATA_PATH);
+
+	RenderImpl render{"stylesheet.xml", std::vector<std::string>(), MAPNIK_PLUGINDIR, 256, 128, 1.0, "png256"};
+	Task task;
+	task.set_x(0);
+	task.set_y(168);
+	task.set_zoom(10);
+	task.set_size(8);
+
+	auto res = render.Do(task);
+	ASSERT_EQ(64, res->tiles_size());
+}
