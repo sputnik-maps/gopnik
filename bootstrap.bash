@@ -46,7 +46,7 @@ for file in `ls thrift/*.thrift`
 do
 	thrift -gen go -I thrift -out src $file
 done
-go-bindata -o src/gopnikwebstatic/bindata.go  -pkg "gopnikwebstatic" -prefix "src/gopnikwebstatic/" src/gopnikwebstatic/public/fonts/ src/gopnikwebstatic/public/css/ src/gopnikwebstatic/public/css/images src/gopnikwebstatic/public/js/
+go-bindata -o src/gopnikwebstatic/bindata.go  -pkg "gopnikwebstatic" -prefix "src/gopnikwebstatic/" src/gopnikwebstatic/public/fonts/ src/gopnikwebstatic/public/css/ src/gopnikwebstatic/public/css/images src/gopnikwebstatic/public/js/ src/gopnikwebstatic/public/img/
 go-bindata -o src/gopnikprerender/bindata.go  -prefix "src/gopnikprerender/" src/gopnikprerender/templates/
 go-bindata -o src/gopnikperf/bindata.go  -prefix "src/gopnikperf/" src/gopnikperf/templates/
 go-bindata -o src/sampledata/bindata.go -pkg "sampledata"  -prefix "sampledata_tiles" sampledata_tiles/

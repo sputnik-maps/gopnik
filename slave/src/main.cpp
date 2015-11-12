@@ -20,7 +20,7 @@ main(int argc, char *argv[]) {
 		unsigned tileSize = 256;
 		int bufferSize = -1;
 		double scaleFactor = 1.0;
-		std::string imageFormat = "png24";
+		std::string imageFormat = "png8";
 
 		options::options_description desc (std::string (argv[0]).append(" options"));
 		desc.add_options()
