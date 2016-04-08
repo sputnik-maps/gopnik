@@ -18,6 +18,12 @@ RUN apt-get -y install python-mapnik libmapnik-dev
 #Install protobuf
 RUN apt-get -y install protobuf-compiler
 
+#Install JQ
+RUN apt-get -y install jq
+
+#Install CMake
+RUN apt-get -y install cmake
+
 #Install golang
 WORKDIR /opt
 RUN wget https://storage.googleapis.com/golang/go1.6.linux-amd64.tar.gz 
@@ -35,7 +41,7 @@ RUN go get github.com/mattn/gom
 RUN mkdir /gopnik
 ADD . /gopnik
 WORKDIR /gopnik
-#RUN gom install
+RUN gom install
 #RUN apt-get -y install golang
 
 #RUN apk add --update git bash ncurses protobuf automake bison flex g++
