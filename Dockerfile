@@ -2,6 +2,8 @@ FROM ubuntu:14.04
 
 WORKDIR /
 
+ENV GO15VENDOREXPERIMENT=0
+
 #Installing apache thrift
 RUN apt-get update
 RUN apt-get -y install automake bison flex g++ git libboost1.54-all-dev libevent-dev libssl-dev libtool make pkg-config wget
@@ -16,13 +18,13 @@ RUN make install
 RUN apt-get -y install python-mapnik libmapnik-dev
 
 #Install protobuf
-RUN apt-get -y install protobuf-compiler
+RUN apt-get -y install protobuf-compiler libprotobuf-dev
 
 #Install JQ
 RUN apt-get -y install jq
 
 #Install CMake
-RUN apt-get -y install cmake
+RUN apt-get -y install cmake libncurses5-dev
 
 #Install golang
 WORKDIR /opt
@@ -42,10 +44,7 @@ RUN mkdir /gopnik
 ADD . /gopnik
 WORKDIR /gopnik
 RUN gom install
-#RUN apt-get -y install golang
+RUN gom exec ./bootstrap.bash
+RUN gom exec ./build.bash
 
-#RUN apk add --update git bash ncurses protobuf automake bison flex g++
-#RUN go get github.com/mattn/gom
-#VOLUME /gopnik/
-
-#VOLUME /go/src/
+ENTRYPOINT ./entrypoint.sh
