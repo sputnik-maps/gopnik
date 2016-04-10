@@ -1,5 +1,5 @@
 #!/bin/bash
 
 cd /gopnik/bin
-./gopnikrender --config ../example/dockerconfig.json &
-./gopnikdispatcher --config ../example/dockerconfig.json
+./gopnikrender --config /gopnik_data/config.json &
+./gopnikdispatcher --config /gopnik_data/config.json

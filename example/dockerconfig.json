@@ -69,7 +69,7 @@
   },
   "RenderPools": [
     {
-      "Cmd": ["./gopnikslave", "-stylesheet", "../sampledata/stylesheet.xml", "-pluginsPath", "/usr/lib/mapnik/2.2/input"],
+      "Cmd": ["/gopnik/bin/gopnikslave", "-stylesheet", "/gopnik_data/stylesheet.xml", "-pluginsPath", "/usr/lib/mapnik/2.2/input"],
       "MinZoom":          1,
       "MaxZoom":          8,
       "PoolSize":         1,
