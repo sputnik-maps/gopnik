@@ -1,5 +1,7 @@
 FROM ubuntu:14.04
 
+MAINTAINER Dmitry Pokidov <dooman87@gmail.com>
+
 WORKDIR /
 
 ENV GO15VENDOREXPERIMENT=0
