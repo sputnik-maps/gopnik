@@ -1,0 +1,81 @@
+{
+  "Dispatcher": {
+    "Addr":             ":8080",
+    "HTTPReadTimeout":  "60s",
+    "HTTPWriteTimeout": "60s",
+    "RequestTimeout":   "600s",
+    "PingPeriod":       "30s",
+    "Threads":          -1,
+    "Logging": {
+      "Backend": "Console",
+      "Level":   "Debug",
+      "Options": {
+        "Color": true
+      }
+    },
+    "ClusterPlugin": {
+      "Plugin":       "ClusterConfigPlugin",
+      "PluginConfig": {
+        "Nodes":    ["localhost:8090"]
+      }
+    }
+  },
+  "Render": {
+    "Addr":             ":8090",
+    "DebugAddr":        ":9090",
+    "Logging": {
+      "Backend": "Console",
+      "Level":   "Debug",
+      "Options": {
+        "Color": true
+      }
+    }
+  },
+  "Prerender": {
+    "UIAddr":   ":8088",
+    "PerfLog": "/tmp/prerender.perf",
+    "Logging": {
+      "Backend": "Console",
+      "Level":   "Debug",
+      "Options": {
+        "Color": false
+      }
+    },
+    "Slaves": {
+      "Plugin":       "ClusterConfigPlugin",
+      "PluginConfig": {
+        "Nodes":    ["localhost:8095"]
+      }
+    }
+  },
+  "PrerenderSlave": {
+    "RPCAddr": ":8095",
+    "Logging": {
+      "Backend": "Console",
+      "Level":   "Debug",
+      "Options": {
+        "Color": false
+      }
+    }
+  },
+  "MetaSize":         8,
+  "TileSize":         256,
+
+  "CachePlugin": {
+    "Plugin": "SimpleFileCachePlugin",
+    "PluginConfig": {
+      "Root": "/tmp/tiles"
+    }
+  },
+  "RenderPools": [
+    {
+      "Cmd": ["/gopnik/bin/gopnikslave", "-stylesheet", "/gopnik_data/stylesheet.xml", "-pluginsPath", "/usr/lib/mapnik/2.2/input"],
+      "MinZoom":          1,
+      "MaxZoom":          8,
+      "PoolSize":         1,
+      "HPQueueSize":      100,
+      "LPQueueSize":      100,
+      "RenderTTL":        10
+    }
+  ]
+}

@@ -10,6 +10,7 @@ import (
 	"gopnikrpc/types"
 	"gopnikrpcutils"
 	"rpcbaseservice"
+	"math"
 )
 
 type thriftTileServer struct {
@@ -51,7 +52,7 @@ func RunServer(addr string, tileServer *TileServer) error {
 	if err != nil {
 		return err
 	}
-	transportFactory := thrift.NewTFramedTransportFactory(thrift.NewTTransportFactory())
+	transportFactory := thrift.NewTFramedTransportFactoryMaxLength(thrift.NewTTransportFactory(), uint32(math.MaxUint32))
 	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
 
 	server := thrift.NewTSimpleServer4(processor, transport, transportFactory, protocolFactory)
