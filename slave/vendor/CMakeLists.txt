@@ -8,24 +8,23 @@ endif()
 
 #gtest
 if(TESTS)
-  set(GTEST_URL "http://googletest.googlecode.com/files/gtest-1.7.0.zip")
+  set(GTEST_URL "https://github.com/google/googletest/archive/release-1.7.0.zip")
   if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/gtest-1.7.0.zip")
     set(GTEST_URL "${CMAKE_CURRENT_SOURCE_DIR}/gtest-1.7.0.zip")
   endif()
 
   ExternalProject_Add(gtest
     URL ${GTEST_URL}
-    URL_MD5 "2d6ec8ccdf5c46b05ba54a9fd1d130d7"
+    URL_MD5 "ef5e700c8a0f3ee123e2e0209b8b4961"
     DOWNLOAD_DIR ${CMAKE_CURRENT_BINARY_DIR}
     SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/gtest-1.7.0
     BUILD_IN_SOURCE 1
-    CONFIGURE_COMMAND "./configure"
     BUILD_COMMAND "make"
     INSTALL_COMMAND ""
   )
 
   set(GTEST_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/gtest-1.7.0/include" PARENT_SCOPE)
-  set(GTEST_BOTH_LIBRARIES "${CMAKE_CURRENT_BINARY_DIR}/gtest-1.7.0/lib/.libs/libgtest.a" "${CMAKE_CURRENT_BINARY_DIR}/gtest-1.7.0/lib/.libs/libgtest.a" PARENT_SCOPE)
+  set(GTEST_BOTH_LIBRARIES "${CMAKE_CURRENT_BINARY_DIR}/gtest-1.7.0/libgtest.a" "${CMAKE_CURRENT_BINARY_DIR}/gtest-1.7.0/libgtest.a" PARENT_SCOPE)
 endif(TESTS)
 
 if(BENCH)
