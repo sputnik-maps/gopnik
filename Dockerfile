@@ -41,10 +41,16 @@ RUN mkdir /gopnik
 ADD . /gopnik
 WORKDIR /gopnik
 RUN gom install && \
+    mkdir _vendor/src && \
+    mv _vendor/git.apache.org/ ./_vendor/src/ && \
+    mv _vendor/github.com/ ./_vendor/src/ && \
+    mv _vendor/golang.org/ ./_vendor/src/ && \
+    mv _vendor/gopkg.in/ ./_vendor/src/ && \
     gom exec ./bootstrap.bash && \
-    gom exec ./build.bash
+    gom exec ./build.bash && \
+    chmod 755 ./entrypoint.sh && \
+    mkdir /gopnik_data
 
-RUN mkdir /gopnik_data
 COPY example/dockerconfig.json /gopnik_data/config.json
 COPY sampledata/stylesheet.xml /gopnik_data/
 COPY sampledata/world_merc.shp /gopnik_data/
